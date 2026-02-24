@@ -4,12 +4,13 @@
  * Covers formatting, color mapping, and edge cases.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   formatFlowRate,
   formatPrice,
   qualityColor,
   severityColor,
+  timeAgo,
 } from "@/lib/utils";
 
 // ─── formatFlowRate ───────────────────────────────────────
@@ -141,5 +142,151 @@ describe("severityColor", () => {
 
   it("returns gray theme for empty string", () => {
     expect(severityColor("")).toBe("text-gray-600 bg-gray-50");
+  });
+});
+
+// ─── timeAgo ──────────────────────────────────────────────
+
+describe("timeAgo", () => {
+  const NOW = new Date("2026-02-24T12:00:00Z").getTime();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // ── "just now" for dates within the last minute ──
+
+  it('returns "just now" for 0 seconds ago', () => {
+    expect(timeAgo(new Date(NOW).toISOString())).toBe("just now");
+  });
+
+  it('returns "just now" for 30 seconds ago', () => {
+    const d = new Date(NOW - 30 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("just now");
+  });
+
+  it('returns "just now" for 59 seconds ago', () => {
+    const d = new Date(NOW - 59 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("just now");
+  });
+
+  // ── "X minutes ago" for 1-59 minutes ──
+
+  it('returns "1 minute ago" (singular)', () => {
+    const d = new Date(NOW - 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("1 minute ago");
+  });
+
+  it('returns "30 minutes ago"', () => {
+    const d = new Date(NOW - 30 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("30 minutes ago");
+  });
+
+  it('returns "59 minutes ago"', () => {
+    const d = new Date(NOW - 59 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("59 minutes ago");
+  });
+
+  // ── "X hours ago" for 1-23 hours ──
+
+  it('returns "1 hour ago" (singular)', () => {
+    const d = new Date(NOW - 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("1 hour ago");
+  });
+
+  it('returns "12 hours ago"', () => {
+    const d = new Date(NOW - 12 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("12 hours ago");
+  });
+
+  it('returns "23 hours ago"', () => {
+    const d = new Date(NOW - 23 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("23 hours ago");
+  });
+
+  // ── "X days ago" for 1-29 days ──
+  // Note: code does not have a "weeks" bucket — days go directly to months at 30.
+
+  it('returns "1 day ago" (singular)', () => {
+    const d = new Date(NOW - 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("1 day ago");
+  });
+
+  it('returns "6 days ago"', () => {
+    const d = new Date(NOW - 6 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("6 days ago");
+  });
+
+  it('returns "7 days ago" (no weeks bucket)', () => {
+    const d = new Date(NOW - 7 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("7 days ago");
+  });
+
+  it('returns "27 days ago"', () => {
+    const d = new Date(NOW - 27 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("27 days ago");
+  });
+
+  it('returns "29 days ago" (boundary before months)', () => {
+    const d = new Date(NOW - 29 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("29 days ago");
+  });
+
+  // ── "X months ago" ──
+
+  it('returns "1 month ago" for 30 days', () => {
+    const d = new Date(NOW - 30 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("1 month ago");
+  });
+
+  it('returns "3 months ago" for ~90 days', () => {
+    const d = new Date(NOW - 90 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("3 months ago");
+  });
+
+  it('returns "11 months ago" for ~330 days', () => {
+    const d = new Date(NOW - 330 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("11 months ago");
+  });
+
+  // ── years ──
+
+  it('returns "1 year ago" for 365+ days', () => {
+    const d = new Date(NOW - 365 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("1 year ago");
+  });
+
+  it('returns "2 years ago"', () => {
+    const d = new Date(NOW - 730 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(d)).toBe("2 years ago");
+  });
+
+  // ── Invalid / empty date strings ──
+
+  it('returns NaN-containing string for empty string', () => {
+    const result = timeAgo("");
+    expect(result).toContain("NaN");
+  });
+
+  it('returns NaN-containing string for garbage input', () => {
+    const result = timeAgo("not-a-date");
+    expect(result).toContain("NaN");
+  });
+
+  // ── Future dates ──
+
+  it('returns "just now" for future date', () => {
+    const future = new Date(NOW + 60 * 60 * 1000).toISOString();
+    expect(timeAgo(future)).toBe("just now");
+  });
+
+  it('returns "just now" for date far in the future', () => {
+    const future = new Date(NOW + 365 * 24 * 60 * 60 * 1000).toISOString();
+    expect(timeAgo(future)).toBe("just now");
   });
 });

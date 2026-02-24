@@ -4,23 +4,46 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConditionBadge } from "./condition-badge";
-import { Droplets, AlertTriangle, Users, ChevronRight } from "lucide-react";
+import { Droplets, AlertTriangle, Users, ChevronRight, Trash2 } from "lucide-react";
 import { formatFlowRate } from "@/lib/utils";
+import { deleteRiver } from "@/lib/api";
 import type { RiverSummary } from "@/types";
 
 interface RiverCardProps {
   river: RiverSummary;
+  onDelete?: () => void;
 }
 
-export function RiverCard({ river }: RiverCardProps) {
+export function RiverCard({ river, onDelete }: RiverCardProps) {
   const cond = river.latestCondition;
   const timeAgo = cond?.scrapedAt
     ? getRelativeTime(new Date(cond.scrapedAt))
     : null;
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${river.name}"? This cannot be undone.`)) return;
+    try {
+      await deleteRiver(river.id);
+      onDelete?.();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to delete river");
+    }
+  };
+
   return (
     <Link href={`/rivers/${river.id}`}>
-      <Card className="group hover:shadow-md transition-shadow cursor-pointer h-full">
+      <Card className="group hover:shadow-md transition-shadow cursor-pointer h-full relative">
+        {onDelete && (
+          <button
+            onClick={handleDelete}
+            className="absolute top-3 right-3 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-[var(--muted)] hover:bg-[var(--destructive)] hover:text-white text-[var(--muted-foreground)]"
+            title="Delete river"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1 min-w-0">

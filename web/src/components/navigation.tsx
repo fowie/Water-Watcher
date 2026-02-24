@@ -13,6 +13,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -66,10 +67,11 @@ function DesktopNav() {
       </nav>
 
       {/* Footer */}
-      <div className="px-6 py-4 border-t border-[var(--border)]">
+      <div className="px-6 py-4 border-t border-[var(--border)] flex items-center justify-between">
         <p className="text-xs text-[var(--muted-foreground)]">
           🌊 Track rivers. Score gear.
         </p>
+        <ThemeToggle />
       </div>
     </aside>
   );
@@ -87,13 +89,16 @@ function MobileNav() {
           <Waves className="h-5 w-5 text-[var(--primary)]" />
           <span className="font-bold text-lg">Water-Watcher</span>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setSheetOpen(!sheetOpen)}
-        >
-          {sheetOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSheetOpen(!sheetOpen)}
+          >
+            {sheetOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
       </header>
 
       {/* Mobile sheet overlay */}

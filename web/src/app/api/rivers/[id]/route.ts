@@ -42,3 +42,27 @@ export async function GET(
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+
+    const existing = await prisma.river.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "River not found" }, { status: 404 });
+    }
+
+    await prisma.river.delete({ where: { id } });
+
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    console.error("DELETE /api/rivers/[id] error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete river" },
+      { status: 500 }
+    );
+  }
+}

@@ -183,4 +183,84 @@ describe("POST /api/deals/filters", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("returns 404 for non-existent user", async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+
+    const req = mockRequest("http://localhost:3000/api/deals/filters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: "ghost-user-999",
+        name: "Phantom filter",
+        keywords: ["kayak"],
+      }),
+    });
+    const res = await POST(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(data.error).toBe("User not found");
+    expect(mockPrisma.dealFilter.create).not.toHaveBeenCalled();
+  });
+
+  it("accepts keywords with special characters", async () => {
+    const specialKeywords = ["dry-suit", "roll (combat)", "class III+", "pfd/life-vest"];
+    const expected = {
+      id: "f-special",
+      userId: "user-1",
+      name: "Special chars",
+      keywords: specialKeywords,
+      categories: [],
+      regions: [],
+      isActive: true,
+    };
+    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
+    mockPrisma.dealFilter.create.mockResolvedValue(expected);
+
+    const req = mockRequest("http://localhost:3000/api/deals/filters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: "user-1",
+        name: "Special chars",
+        keywords: specialKeywords,
+      }),
+    });
+    const res = await POST(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(data.keywords).toEqual(specialKeywords);
+  });
+
+  it("accepts keywords with unicode and emoji", async () => {
+    const unicodeKeywords = ["ラフティング", "🚣 kayak", "río"];
+    const expected = {
+      id: "f-unicode",
+      userId: "user-1",
+      name: "Unicode filter",
+      keywords: unicodeKeywords,
+      categories: [],
+      regions: [],
+      isActive: true,
+    };
+    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
+    mockPrisma.dealFilter.create.mockResolvedValue(expected);
+
+    const req = mockRequest("http://localhost:3000/api/deals/filters", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: "user-1",
+        name: "Unicode filter",
+        keywords: unicodeKeywords,
+      }),
+    });
+    const res = await POST(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(data.keywords).toEqual(unicodeKeywords);
+  });
 });

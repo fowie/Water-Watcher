@@ -72,3 +72,24 @@ All tests pass: 147 Python (pytest), 119 TypeScript (vitest).
 1. Hazard classifier (`pipeline/scrapers/american_whitewater.py` `_classify_hazard`) — "logjam" was misclassified as "strainer" because the strainer check (containing "log") ran before the logjam check. Fixed by moving logjam check first and removing the ambiguous "log" keyword from strainer keywords (kept "strainer", "tree", "wood", "debris").
 2. Craigslist RSS parser (`pipeline/scrapers/craigslist.py` `_scrape_rss`) — ElementTree elements with no children evaluate as falsy even when they exist and have `.text`. The `or` pattern (`item.find("title") or item.find(...)`) would skip valid elements. Fixed by using explicit `is None` checks for all four element lookups (title, link, description, date).
 Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" instead of "strainer", added "log jam" two-word test case. All 278 tests pass.
+
+**2026-02-24:** Created database seed script, service worker, and DELETE endpoint:
+
+### Seed Script (`web/prisma/seed.ts`)
+- Creates demo user (id: "demo-user", name: "Spencer") via upsert
+- Seeds 3 rivers: Colorado (Gore Canyon), Salmon (Main Salmon), Arkansas (Browns Canyon) — all with AW IDs and USGS gauges where applicable
+- Seeds 6 river conditions (2 per river at different timestamps), 6 hazards (2 per river), 3 campsites, 5 rapids, 3 gear deals (raft/kayak/PFD), and 1 deal filter
+- Uses `prisma.*.upsert` for entities with unique constraints (user, rivers by awId, deals by url, filter by id). Uses `deleteMany` + `createMany` for entities without stable unique keys (hazards, campsites, rapids, conditions)
+- Idempotent: safe to run multiple times. `package.json` already had `"db:seed": "tsx prisma/seed.ts"`
+
+### Service Worker (`web/public/sw.js`)
+- Handles `push` events: parses JSON payload, shows notification with title/body/icon/badge
+- Handles `notificationclick`: opens the URL from notification data, focuses existing tab if available
+- Handles `activate`: claims all clients for immediate control
+- No caching — Next.js handles that
+
+### DELETE Endpoint (`web/src/app/api/rivers/[id]/route.ts`)
+- Added `DELETE` handler alongside existing `GET`
+- Returns 204 on success, 404 if river not found, 500 on error
+- Prisma schema has `onDelete: Cascade` on all river relations, so conditions/hazards/campsites/rapids/trackedBy are automatically cleaned up
+- Added 3 tests (success, 404, 500) — all 122 vitest tests pass

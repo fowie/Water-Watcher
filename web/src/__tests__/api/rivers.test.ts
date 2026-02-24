@@ -18,6 +18,7 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn(),
     findUnique: vi.fn(),
     count: vi.fn(),
+    delete: vi.fn(),
   },
 }));
 
@@ -26,7 +27,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { GET, POST } from "@/app/api/rivers/route";
-import { GET as GET_DETAIL } from "@/app/api/rivers/[id]/route";
+import { GET as GET_DETAIL, DELETE } from "@/app/api/rivers/[id]/route";
 
 // Helper to create mock Request objects
 function mockRequest(url: string, options: RequestInit = {}): Request {
@@ -468,5 +469,46 @@ describe("GET /api/rivers — edge cases", () => {
     expect(data.campsites).toHaveLength(1);
     expect(data.rapids).toHaveLength(1);
     expect(data._count.trackedBy).toBe(42);
+  });
+});
+
+describe("DELETE /api/rivers/:id", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("deletes a river and returns 204", async () => {
+    mockPrisma.river.findUnique.mockResolvedValue({ id: "river-1", name: "Test River" });
+    mockPrisma.river.delete.mockResolvedValue({ id: "river-1" });
+
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", { method: "DELETE" });
+    const res = await DELETE(req, { params: Promise.resolve({ id: "river-1" }) });
+
+    expect(res.status).toBe(204);
+    expect(mockPrisma.river.delete).toHaveBeenCalledWith({ where: { id: "river-1" } });
+  });
+
+  it("returns 404 when river does not exist", async () => {
+    mockPrisma.river.findUnique.mockResolvedValue(null);
+
+    const req = mockRequest("http://localhost:3000/api/rivers/nonexistent", { method: "DELETE" });
+    const res = await DELETE(req, { params: Promise.resolve({ id: "nonexistent" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(data.error).toBe("River not found");
+    expect(mockPrisma.river.delete).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 on database error", async () => {
+    mockPrisma.river.findUnique.mockResolvedValue({ id: "river-1" });
+    mockPrisma.river.delete.mockRejectedValue(new Error("DB error"));
+
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", { method: "DELETE" });
+    const res = await DELETE(req, { params: Promise.resolve({ id: "river-1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.error).toBe("Failed to delete river");
   });
 });

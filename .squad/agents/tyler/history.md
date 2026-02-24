@@ -86,3 +86,36 @@
 
 ### RapidRating Color Updates (`web/src/components/rapid-rating.tsx`)
 - Class II changed from blue to green, matching the rafter convention: I-II = green, III = yellow, IV = orange, V+ = red
+
+**2026-02-24:** Three feature improvements — dashboard homepage, river delete, dark mode toggle:
+
+### Dashboard Homepage (`web/src/app/page.tsx`)
+- Replaced static hero/marketing page with a functional dashboard (client component)
+- Quick stats row: total rivers, active hazards, recent deals count, active deal filters — fetched via `Promise.allSettled` for resilient loading
+- "Recent Conditions" section shows last 5 rivers from API
+- "Latest Deals" section shows 3 most recent gear deals
+- Loading skeletons for all sections while data fetches
+- Empty states with links to add rivers / browse deals
+
+### River Card Delete (`web/src/components/river-card.tsx`)
+- Added `onDelete?: () => void` callback prop to `RiverCardProps`
+- Trash2 icon button appears on hover in top-right corner (absolute positioned, z-10)
+- Click handler: `e.preventDefault()` + `e.stopPropagation()` to prevent Link navigation
+- `window.confirm()` before calling `deleteRiver(id)` from api.ts
+- Destructive hover color on the trash button for clear affordance
+
+### Delete River API Client (`web/src/lib/api.ts`)
+- Added `deleteRiver(id: string): Promise<void>` — calls `DELETE /api/rivers/{id}`
+- Fixed `getRivers` to properly handle paginated response `{ rivers, total, limit, offset }` — was incorrectly treating response as a bare array
+- Added `RiversResponse` export interface with `rivers`, `total`, `limit`, `offset`
+- Added `limit` and `offset` params to `getRivers`
+- Updated `web/src/app/rivers/page.tsx` to destructure `.rivers` from new response shape
+
+### Dark Mode Toggle (`web/src/components/theme-toggle.tsx`)
+- `ThemeToggle` component: Sun/Moon icons from lucide-react
+- Toggles `dark` class on `<html>` element
+- Persists preference in `localStorage` under key `"theme"`
+- SSR-safe: renders placeholder div until mounted to avoid hydration mismatch
+- Respects `prefers-color-scheme` on first load if no stored preference
+- Added to desktop sidebar footer and mobile top header bar in `navigation.tsx`
+- CSS: `html.dark { ... }` block in `globals.css` mirrors existing `@media (prefers-color-scheme: dark)` variables

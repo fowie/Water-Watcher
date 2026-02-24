@@ -22,18 +22,34 @@ async function fetcher<T>(url: string, init?: RequestInit): Promise<T> {
 
 // ─── Rivers ─────────────────────────────────────────────
 
+export interface RiversResponse {
+  rivers: RiverSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export async function getRivers(params?: {
   search?: string;
   state?: string;
-}): Promise<RiverSummary[]> {
+  limit?: number;
+  offset?: number;
+}): Promise<RiversResponse> {
   const sp = new URLSearchParams();
   if (params?.search) sp.set("search", params.search);
   if (params?.state) sp.set("state", params.state);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
   const q = sp.toString();
-  const raw = await fetcher<Record<string, unknown>[]>(
+  const data = await fetcher<{ rivers: Record<string, unknown>[]; total: number; limit: number; offset: number }>(
     `/api/rivers${q ? `?${q}` : ""}`
   );
-  return raw.map(mapRiverSummary);
+  return {
+    rivers: data.rivers.map(mapRiverSummary),
+    total: data.total,
+    limit: data.limit,
+    offset: data.offset,
+  };
 }
 
 export async function getRiver(id: string): Promise<RiverDetail> {
@@ -45,6 +61,16 @@ export async function createRiver(data: RiverInput) {
     method: "POST",
     body: JSON.stringify(data),
   });
+}
+
+export async function deleteRiver(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/rivers/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Delete failed: ${res.status}`);
+  }
 }
 
 // ─── Deals ──────────────────────────────────────────────

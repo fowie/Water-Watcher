@@ -38,6 +38,12 @@
 - Had to install `lxml` and `pywebpush` into the test environment — these were runtime deps not in requirements-dev.txt.
 - Pipeline test count: 278 (was 147).
 
+**2026-02-24:** Round 3 — targeted test expansion for recent features:
+- Added 25 `timeAgo` tests to `utils.test.ts`: covers just-now (0-59s), minutes (1-59), hours (1-23), days (1-29), months (1-11), years, invalid dates, and future dates. Discovered `timeAgo` has no "weeks" bucket — 7-29 days all display as "X days ago". Invalid date strings (empty or garbage) produce "NaN years ago" — no graceful fallback.
+- DELETE `/api/rivers/:id` tests were already in place from a prior round (204 success, 404 not found, 500 DB error). No new tests needed.
+- Added 3 deal filter edge cases to `deals-filters.test.ts`: non-existent user returns 404 (verifies `findUnique` guard), special ASCII characters in keywords pass validation, unicode/emoji keywords pass validation.
+- Final counts: **web 148 tests** (was 119), **pipeline 278 tests** (unchanged).
+
 ---
 
 ## Cross-Agent Updates

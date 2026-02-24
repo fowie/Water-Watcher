@@ -21,7 +21,7 @@ export default function RiversPage() {
     setError(null);
     try {
       const data = await getRivers({ search: search || undefined });
-      setRivers(data);
+      setRivers(data.rivers);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load rivers");
     } finally {
@@ -87,7 +87,7 @@ export default function RiversPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {rivers.map((river) => (
-            <RiverCard key={river.id} river={river} />
+            <RiverCard key={river.id} river={river} onDelete={fetchRivers} />
           ))}
         </div>
       )}
