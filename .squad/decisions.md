@@ -100,6 +100,36 @@ Category=30pts, keywords=10pts each (max 40), price=20+bonus, region=10pts. Thre
 
 ---
 
+## BD-004: Explicit None Checks for Numeric Fields
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+In Python, always use `is not None` instead of truthiness checks when evaluating numeric fields that can legitimately be `0` (e.g., `deal.price`, `f.max_price`). Truthiness checks (`if value:`) treat `0` as falsy, silently skipping logic for $0/free items. Also standardized input validation clamping across all paginated API routes — both `limit` and `offset` use `Math.min`/`Math.max` to prevent negative or excessive values.
+
+---
+
+## FE-005: River Detail UX Enhancements
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+1. **`timeAgo` utility** — Human-friendly relative timestamps in `web/src/lib/utils.ts`. Used on condition and hazard records.
+2. **`FlowTrend` component** — Compares two most recent flow readings: ↑ rising >10%, ↓ falling >10%, → stable.
+3. **RapidRating color update** — Class II changed from blue to green to match standard rafter convention.
+4. **Google Maps links on campsites** — External link for campsites with lat/lng using `https://www.google.com/maps?q=` format.
+
+---
+
+## QA-001: Untested Module Coverage & Bug Discoveries
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Pappas
+
+Added 131 tests across Craigslist scraper (57), AW scraper (35), and Push notifier (39). Pipeline tests: 147 → 278, all passing.
+
+**Bugs found:**
+1. **Craigslist RSS ElementTree truthiness** — `item.find("title") or item.find("{ns}title")` fails because childless Elements are falsy in Python 3.12. Fix: use `is not None` checks.
+2. **Hazard classification keyword order** — "log" keyword checked before "logjam", causing logjam hazards to classify as strainer. Fix: reorder or use word-boundary matching.
+
+**Note:** `lxml` and `pywebpush` should be added to `requirements-dev.txt` for test environments.
+
+---
+
 ## BD-004: SQLAlchemy Models Must Mirror Prisma
 **Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
 
