@@ -1,0 +1,16 @@
+{
+  "assignments": [
+    {
+      "assignment_id": "water-watcher-001",
+      "universe": "Point Break",
+      "created_at": "2026-02-24T22:30:00Z",
+      "agents": [
+        {"name": "Bodhi", "role": "Lead"},
+        {"name": "Tyler", "role": "Frontend Dev"},
+        {"name": "Utah", "role": "Backend Dev"},
+        {"name": "Pappas", "role": "Tester"}
+      ],
+      "reason": "Adventure sports + water resonance with whitewater rafting project"
+    }
+  ]
+}

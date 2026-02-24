@@ -1,0 +1,6 @@
+{
+  "default_universe": null,
+  "max_capacity": 25,
+  "overflow_strategy": "diegetic_expansion",
+  "universes_allowed": "all"
+}

@@ -1,0 +1,36 @@
+{
+  "agents": [
+    {
+      "persistent_name": "Bodhi",
+      "role": "Lead",
+      "universe": "Point Break",
+      "created_at": "2026-02-24T22:30:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Tyler",
+      "role": "Frontend Dev",
+      "universe": "Point Break",
+      "created_at": "2026-02-24T22:30:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Utah",
+      "role": "Backend Dev",
+      "universe": "Point Break",
+      "created_at": "2026-02-24T22:30:00Z",
+      "legacy_named": false,
+      "status": "active"
+    },
+    {
+      "persistent_name": "Pappas",
+      "role": "Tester",
+      "universe": "Point Break",
+      "created_at": "2026-02-24T22:30:00Z",
+      "legacy_named": false,
+      "status": "active"
+    }
+  ]
+}

@@ -1,0 +1,228 @@
+// Prisma schema for Water-Watcher
+// Shared database between Next.js web app and Python scraping pipeline
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Rivers ───────────────────────────────────────────────
+
+model River {
+  id          String   @id @default(cuid())
+  name        String
+  state       String
+  region      String?
+  latitude    Float?
+  longitude   Float?
+  difficulty  String?  // e.g., "Class III-IV"
+  description String?
+  awId        String?  @unique @map("aw_id") // American Whitewater ID
+  usgsGaugeId String?  @map("usgs_gauge_id") // USGS gauge station ID
+  imageUrl    String?  @map("image_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  conditions  RiverCondition[]
+  hazards     Hazard[]
+  campsites   Campsite[]
+  rapids      Rapid[]
+  trackedBy   UserRiver[]
+
+  @@map("rivers")
+}
+
+model RiverCondition {
+  id          String   @id @default(cuid())
+  riverId     String   @map("river_id")
+  flowRate    Float?   @map("flow_rate")    // CFS
+  gaugeHeight Float?   @map("gauge_height") // feet
+  waterTemp   Float?   @map("water_temp")   // fahrenheit
+  quality     String?  // "excellent", "good", "fair", "poor", "dangerous"
+  runnability String?  // "optimal", "runnable", "too_low", "too_high"
+  source      String   // "usgs", "aw", "facebook", "blm", "usfs"
+  sourceUrl   String?  @map("source_url")
+  rawData     Json?    @map("raw_data")
+  scrapedAt   DateTime @map("scraped_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  river River @relation(fields: [riverId], references: [id], onDelete: Cascade)
+
+  @@index([riverId, scrapedAt])
+  @@map("river_conditions")
+}
+
+model Hazard {
+  id          String   @id @default(cuid())
+  riverId     String   @map("river_id")
+  type        String   // "strainer", "dam", "logjam", "rapid_change", "closure", "permit_required"
+  severity    String   // "info", "warning", "danger"
+  title       String
+  description String?
+  source      String
+  sourceUrl   String?  @map("source_url")
+  reportedAt  DateTime @map("reported_at")
+  expiresAt   DateTime? @map("expires_at")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  river River @relation(fields: [riverId], references: [id], onDelete: Cascade)
+
+  @@index([riverId, isActive])
+  @@map("hazards")
+}
+
+model Campsite {
+  id          String   @id @default(cuid())
+  riverId     String   @map("river_id")
+  name        String
+  latitude    Float?
+  longitude   Float?
+  type        String?  // "blm", "usfs", "private", "dispersed"
+  amenities   String[] // ["fire_ring", "toilet", "water", "boat_ramp"]
+  permitReq   Boolean  @default(false) @map("permit_required")
+  description String?
+  source      String
+  sourceUrl   String?  @map("source_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  river River @relation(fields: [riverId], references: [id], onDelete: Cascade)
+
+  @@map("campsites")
+}
+
+model Rapid {
+  id          String   @id @default(cuid())
+  riverId     String   @map("river_id")
+  name        String
+  difficulty  String?  // "Class II", "Class IV+"
+  mile        Float?   // river mile marker
+  description String?
+  runGuide    String?  @map("run_guide") // how to run it
+  source      String
+  sourceUrl   String?  @map("source_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  river River @relation(fields: [riverId], references: [id], onDelete: Cascade)
+
+  @@map("rapids")
+}
+
+// ─── Raft Watch (Gear Deals) ──────────────────────────────
+
+model GearDeal {
+  id          String   @id @default(cuid())
+  title       String
+  price       Float?
+  url         String   @unique
+  imageUrl    String?  @map("image_url")
+  description String?
+  category    String?  // "raft", "kayak", "paddle", "pfd", "drysuit", "other"
+  region      String?  // craigslist region
+  postedAt    DateTime? @map("posted_at")
+  scrapedAt   DateTime @map("scraped_at")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  matchedFilters DealFilterMatch[]
+
+  @@index([category, isActive])
+  @@index([scrapedAt])
+  @@map("gear_deals")
+}
+
+model DealFilter {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  name        String
+  keywords    String[] // search terms
+  categories  String[] // gear categories to match
+  maxPrice    Float?   @map("max_price")
+  regions     String[] // craigslist regions
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  matches DealFilterMatch[]
+
+  @@map("deal_filters")
+}
+
+model DealFilterMatch {
+  id        String   @id @default(cuid())
+  filterId  String   @map("filter_id")
+  dealId    String   @map("deal_id")
+  notified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  filter DealFilter @relation(fields: [filterId], references: [id], onDelete: Cascade)
+  deal   GearDeal   @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@unique([filterId, dealId])
+  @@map("deal_filter_matches")
+}
+
+// ─── Users & Preferences ─────────────────────────────────
+
+model User {
+  id            String   @id @default(cuid())
+  email         String?  @unique
+  name          String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  trackedRivers UserRiver[]
+  dealFilters   DealFilter[]
+  pushSubs      PushSubscription[]
+
+  @@map("users")
+}
+
+model UserRiver {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  riverId     String   @map("river_id")
+  notify      Boolean  @default(true) // notify on condition changes
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  river River @relation(fields: [riverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, riverId])
+  @@map("user_rivers")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+// ─── Scraper Metadata ─────────────────────────────────────
+
+model ScrapeLog {
+  id         String   @id @default(cuid())
+  source     String   // scraper name
+  status     String   // "success", "error", "partial"
+  itemCount  Int      @default(0) @map("item_count")
+  error      String?
+  duration   Int?     // milliseconds
+  startedAt  DateTime @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([source, startedAt])
+  @@map("scrape_logs")
+}
