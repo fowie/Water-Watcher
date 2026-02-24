@@ -7,8 +7,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const state = searchParams.get("state");
     const search = searchParams.get("search");
-    const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 100);
-    const offset = parseInt(searchParams.get("offset") ?? "0");
+    const limit = Math.min(
+      Math.max(parseInt(searchParams.get("limit") ?? "50"), 1),
+      100
+    );
+    const offset = Math.max(parseInt(searchParams.get("offset") ?? "0"), 0);
 
     const where: Record<string, unknown> = {};
     if (state) where.state = state;

@@ -70,3 +70,19 @@
 - Toast system uses module-level state with listener pattern so `toast()` can be called outside React trees.
 - Navigation active route detection verified correct: exact match for "/", prefix match for "/rivers" and "/deals".
 
+**2026-02-24:** River detail page enhancements for practical rafter UX:
+
+### New Utilities & Components
+- `timeAgo(dateString)` added to `web/src/lib/utils.ts` — converts ISO dates to human-friendly relative times ("2 hours ago", "3 days ago", etc.)
+- `web/src/components/flow-trend.tsx` — `FlowTrend` component showing trend arrow (↑ rising, ↓ falling, → stable) by comparing most recent two flow rate readings. Thresholds: >10% change = rising/falling, ≤10% = stable.
+
+### River Detail Page Updates (`web/src/app/rivers/[id]/page.tsx`)
+- Condition timestamps now show relative time via `timeAgo()` instead of raw `toLocaleString()`
+- Hazard report dates now show relative time via `timeAgo()` instead of `toLocaleDateString()`
+- Flow Rate stat card shows `FlowTrend` arrow next to the CFS value
+- `StatCard` component extended with optional `extra` prop for inline supplementary content
+- Campsite names now have a small external link icon next to them (linking to Google Maps) when lat/lng available
+- Google Maps URLs updated to canonical `https://www.google.com/maps?q=` format
+
+### RapidRating Color Updates (`web/src/components/rapid-rating.tsx`)
+- Class II changed from blue to green, matching the rafter convention: I-II = green, III = yellow, IV = orange, V+ = red

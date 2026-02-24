@@ -180,7 +180,7 @@ class DealMatcher:
         # --- Hard disqualifiers ---
 
         # Price ceiling: if set and deal price exceeds it, no match
-        if f.max_price and deal.price and deal.price > f.max_price:
+        if f.max_price is not None and deal.price is not None and deal.price > f.max_price:
             return 0
 
         # Region whitelist: if set and deal region doesn't match, no match
@@ -209,7 +209,7 @@ class DealMatcher:
             score += 20  # no keywords = broad match
 
         # --- Price bonus (20 pts) ---
-        if f.max_price and deal.price:
+        if f.max_price is not None and deal.price is not None:
             score += 20
             # Bonus for being well under budget (up to 10 extra pts)
             savings_pct = (f.max_price - deal.price) / f.max_price

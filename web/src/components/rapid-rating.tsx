@@ -7,7 +7,7 @@ interface RapidRatingProps {
 
 const difficultyColors: Record<string, string> = {
   "Class I": "bg-green-100 text-green-800 border-green-300",
-  "Class II": "bg-blue-100 text-blue-800 border-blue-300",
+  "Class II": "bg-green-100 text-green-800 border-green-300",
   "Class III": "bg-yellow-100 text-yellow-800 border-yellow-300",
   "Class IV": "bg-orange-100 text-orange-800 border-orange-300",
   "Class IV+": "bg-orange-200 text-orange-900 border-orange-400",

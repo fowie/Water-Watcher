@@ -10,8 +10,9 @@ import { HazardBadge } from "@/components/hazard-badge";
 import { RapidRating } from "@/components/rapid-rating";
 import { NotificationToggle } from "@/components/notification-toggle";
 import { Button } from "@/components/ui/button";
+import { FlowTrend } from "@/components/flow-trend";
 import { getRiver } from "@/lib/api";
-import { formatFlowRate } from "@/lib/utils";
+import { formatFlowRate, timeAgo } from "@/lib/utils";
 import {
   ArrowLeft,
   Droplets,
@@ -117,6 +118,9 @@ export default function RiverDetailPage() {
             icon={<Droplets className="h-4 w-4" />}
             label="Flow Rate"
             value={formatFlowRate(latestCondition.flowRate)}
+            extra={
+              <FlowTrend conditions={river.conditions ?? []} />
+            }
           />
           <StatCard
             icon={<Ruler className="h-4 w-4" />}
@@ -188,10 +192,12 @@ function StatCard({
   icon,
   label,
   value,
+  extra,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
+  extra?: React.ReactNode;
 }) {
   return (
     <Card>
@@ -199,7 +205,10 @@ function StatCard({
         <span className="text-xs text-[var(--muted-foreground)] flex items-center gap-1.5">
           {icon} {label}
         </span>
-        <span className="text-lg font-bold">{value}</span>
+        <span className="text-lg font-bold flex items-center gap-1.5">
+          {value}
+          {extra}
+        </span>
       </CardContent>
     </Card>
   );
@@ -255,7 +264,7 @@ function ConditionsTab({ conditions }: { conditions: ConditionRecord[] }) {
             </div>
             <p className="text-xs text-[var(--muted-foreground)] mt-2 flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {new Date(cond.scrapedAt).toLocaleString()}
+              {timeAgo(cond.scrapedAt)}
             </p>
           </CardContent>
         </Card>
@@ -304,7 +313,7 @@ function HazardsTab({ hazards }: { hazards: HazardRecord[] }) {
             <div className="flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                Reported: {new Date(hazard.reportedAt).toLocaleDateString()}
+                Reported {timeAgo(hazard.reportedAt)}
               </span>
               <span className="flex items-center gap-1">
                 Source: {hazard.source}
@@ -388,6 +397,17 @@ function CampsitesTab({ campsites }: { campsites: CampsiteRecord[] }) {
             <CardTitle className="text-base flex items-center gap-2">
               <Tent className="h-4 w-4 text-[var(--primary)]" />
               {camp.name}
+              {camp.latitude != null && camp.longitude != null && (
+                <a
+                  href={`https://www.google.com/maps?q=${camp.latitude},${camp.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--muted-foreground)] hover:text-[var(--primary)] transition-colors"
+                  title="Open in Google Maps"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -425,7 +445,7 @@ function CampsitesTab({ campsites }: { campsites: CampsiteRecord[] }) {
               )}
               {camp.latitude != null && camp.longitude != null && (
                 <a
-                  href={`https://maps.google.com/?q=${camp.latitude},${camp.longitude}`}
+                  href={`https://www.google.com/maps?q=${camp.latitude},${camp.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-[var(--primary)] hover:underline"

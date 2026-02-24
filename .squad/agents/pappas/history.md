@@ -29,6 +29,15 @@
 - Test count after this round: web 119 (was 98), pipeline 147 (was 130).
 - Weakest coverage areas: Craigslist scraper (no test file), AW scraper (no test file), notification delivery (push_notifier.py untested), condition_processor integration paths, web component rendering.
 
+**2026-02-24:** Untested module coverage round. Three new test files created (131 new tests):
+- `test_craigslist_scraper.py` (57 tests): _categorize, _is_relevant, _extract_price, RSS/RDF parsing, HTML fallback, deduplication, rate limiting, error handling.
+- `test_aw_scraper.py` (35 tests): _fetch_reach_detail, _fetch_gauge_data, _extract_reach_data, difficulty normalization, _classify_hazard, _parse_float, _clean_html, tracked river lookup, integration.
+- `test_push_notifier.py` (39 tests): _send_push success/failure, 410 cleanup, _build_deal_payload, notify_deal_matches grouping, notify_condition_change direction detection, notify_hazard_alert severity emojis, VAPID key guard.
+- **Bug found:** `craigslist.py` _scrape_rss uses `el.find("tag") or el.find("{ns}tag")` — in Python 3.12, Element truthiness for childless elements is False (DeprecationWarning), so standard RSS 2.0 items are silently skipped. Only RDF-format RSS works correctly. Production CL feeds appear to use RDF format so this may not cause issues in practice, but the code will break when Element truthiness changes to always-True in a future Python version.
+- **Bug found:** `_classify_hazard` checks strainer keywords (including "log") before logjam keywords ("logjam", "log jam"), so "logjam" always classifies as "strainer" since "log" is a substring of "logjam".
+- Had to install `lxml` and `pywebpush` into the test environment — these were runtime deps not in requirements-dev.txt.
+- Pipeline test count: 278 (was 147).
+
 ---
 
 ## Cross-Agent Updates

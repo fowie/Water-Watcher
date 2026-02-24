@@ -22,6 +22,7 @@ export { DealCard } from "./deal-card";
 export { ConditionBadge } from "./condition-badge";
 export { HazardBadge } from "./hazard-badge";
 export { RapidRating } from "./rapid-rating";
+export { FlowTrend } from "./flow-trend";
 export { AddRiverDialog } from "./add-river-dialog";
 export { CreateFilterDialog } from "./create-filter-dialog";
 export { NotificationToggle } from "./notification-toggle";
