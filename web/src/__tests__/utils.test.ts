@@ -222,19 +222,19 @@ describe("timeAgo", () => {
     expect(timeAgo(d)).toBe("6 days ago");
   });
 
-  it('returns "7 days ago" (no weeks bucket)', () => {
+  it('returns "1 week ago" for 7 days', () => {
     const d = new Date(NOW - 7 * 24 * 60 * 60 * 1000).toISOString();
-    expect(timeAgo(d)).toBe("7 days ago");
+    expect(timeAgo(d)).toBe("1 week ago");
   });
 
-  it('returns "27 days ago"', () => {
+  it('returns "3 weeks ago" for 27 days', () => {
     const d = new Date(NOW - 27 * 24 * 60 * 60 * 1000).toISOString();
-    expect(timeAgo(d)).toBe("27 days ago");
+    expect(timeAgo(d)).toBe("3 weeks ago");
   });
 
-  it('returns "29 days ago" (boundary before months)', () => {
+  it('returns "4 weeks ago" for 29 days (boundary before months)', () => {
     const d = new Date(NOW - 29 * 24 * 60 * 60 * 1000).toISOString();
-    expect(timeAgo(d)).toBe("29 days ago");
+    expect(timeAgo(d)).toBe("4 weeks ago");
   });
 
   // ── "X months ago" ──
@@ -268,14 +268,12 @@ describe("timeAgo", () => {
 
   // ── Invalid / empty date strings ──
 
-  it('returns NaN-containing string for empty string', () => {
-    const result = timeAgo("");
-    expect(result).toContain("NaN");
+  it('returns "unknown" for empty string', () => {
+    expect(timeAgo("")).toBe("unknown");
   });
 
-  it('returns NaN-containing string for garbage input', () => {
-    const result = timeAgo("not-a-date");
-    expect(result).toContain("NaN");
+  it('returns "unknown" for garbage input', () => {
+    expect(timeAgo("not-a-date")).toBe("unknown");
   });
 
   // ── Future dates ──
