@@ -162,3 +162,30 @@
 **2026-02-24 (Round 4 cross-agent — from Pappas):** Added 51 new web tests (148 → 199) covering api-errors, health, PATCH rivers, PATCH deal filters. Total: 477 tests. Dashboard component testing blocked on missing @testing-library/react.
 
 **2026-02-24 (Round 4 cross-agent — from Coordinator):** Fixed `timeAgo` bugs — added "weeks ago" bucket for 7-27 days, graceful fallback for invalid date inputs.
+
+**2026-02-24:** Error boundaries, 404 pages, loading states, river search improvements, and metadata:
+
+### Error Boundaries & 404 Pages
+- `web/src/app/not-found.tsx` — Global 404 with water-themed emoji art (mountain + kayak), Card-based centered layout, link back to dashboard
+- `web/src/app/error.tsx` — "use client" global error boundary with AlertTriangle icon, Try Again (calls `reset()`), and Back to Dashboard link
+- `web/src/app/rivers/[id]/error.tsx` — River-specific error boundary: "Couldn't load river" with Try Again and Back to Rivers
+- `web/src/app/rivers/[id]/not-found.tsx` — "River not found" with desert emoji and link to rivers list
+
+### Loading States (Next.js file-convention skeletons)
+- `web/src/app/loading.tsx` — Global loading: header skeleton + 6-card grid
+- `web/src/app/rivers/loading.tsx` — River list loading: header + search bar + 6-card grid skeletons
+- `web/src/app/rivers/[id]/loading.tsx` — River detail loading: breadcrumb + header + 4 stat cards + tabs + content skeletons
+- `web/src/app/deals/loading.tsx` — Deals loading: header + filter bar + 8-card grid with image placeholder skeletons
+- All use existing `Skeleton` component from `ui/skeleton.tsx`
+
+### River Search Improvements (`web/src/app/rivers/page.tsx`)
+- Difficulty filter chips: Class I through V+ buttons using the same color scheme as `RapidRating`. Toggle on/off, multi-select. Active state uses solid background. All client-side filtering on already-fetched data.
+- Sort by dropdown (Radix Select): Name A–Z, Recently Updated, Most Hazards. Default: Name A–Z.
+- `useMemo` for filtering + sorting pipeline to avoid re-computation
+- "Clear" button appears when filters or non-default sort active
+
+### Metadata & Favicon (`web/src/app/layout.tsx`)
+- Added Open Graph tags: title, description, siteName, type, locale
+- Added Twitter card metadata
+- Emoji favicon via SVG data URL trick (🏞️ landscape emoji)
+- `metadataBase` set from `NEXT_PUBLIC_BASE_URL` env var with localhost fallback

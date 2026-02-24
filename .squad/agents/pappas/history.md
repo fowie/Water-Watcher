@@ -66,3 +66,12 @@
 **2026-02-24 (Round 4 cross-agent — from Tyler):** Built `/settings` page, `EditRiverDialog`, `MapLink` component, and comprehensive accessibility pass. Build clean.
 
 **2026-02-24 (Round 4 cross-agent — from Coordinator):** Fixed `timeAgo` bugs — added "weeks ago" bucket for 7-27 days, graceful fallback for invalid date inputs.
+
+**2026-02-24:** Round 5 — expanded test coverage for untested areas. Five new test files created (129 pipeline + 37 web = 166 new tests):
+- `test_condition_processor_integration.py` (41 tests): Full process() flow, source priority merging, 2-hour merge window, runnability_to_quality edge cases, same-source temporal behavior, DEFAULT_FLOW_RANGES validation. Discovered: `classify_runnability(float('inf'))` returns None because `inf < inf` is False in the dangerous range boundary check. Also, `_find_river()` only supports "usgs" and "aw" sources — facebook/blm/usfs items are silently skipped.
+- `test_usgs_scraper_extended.py` (32 tests): Malformed responses, rate limiting, timeouts, multi-gauge parsing, negative/zero values, URL format verification. Discovered: USGS scraper only catches `httpx.HTTPError` — non-numeric values ("Ice"), missing sourceInfo, and HTML maintenance responses all raise uncaught exceptions (ValueError, KeyError, JSONDecodeError). These are real production bugs.
+- `test_main.py` (22 tests): `_validate_startup()`, scheduler configuration, graceful shutdown, `run_river_scrapers()`, `run_raft_watch()`. `main()` catches `(KeyboardInterrupt, SystemExit)` so scheduler tests need KeyboardInterrupt not SystemExit to exit.
+- `test_settings.py` (34 tests): Default values, env overrides, type coercion, edge cases. Settings dataclass uses `os.getenv` with defaults — empty string env var overrides the default (doesn't fall through). No validation on negative intervals or zero timeouts.
+- `api-client.test.ts` (37 tests): All API client functions mocked with fetch. Verified URLs, methods, headers, error handling, query param encoding. `deleteRiver` and `getHealth` use raw `fetch` (not the `fetcher` helper), so they have different header behavior.
+- Final counts: **pipeline 407 tests** (was 278), **web 236 tests** (was 199).
+- **Bugs identified:** (1) USGS scraper lacks error handling for non-numeric values, missing fields, and non-JSON responses; (2) `_find_river()` only handles usgs/aw sources, making blm/usfs/facebook conditions dead code; (3) `classify_runnability(inf)` returns None due to half-open range boundary.

@@ -16,5 +16,55 @@ services:
       timeout: 5s
       retries: 5
 
+  db-migrate:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      target: builder
+    container_name: waterwatcher-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher}
+    command: npx prisma db push --skip-generate
+    restart: "no"
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: waterwatcher-web
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:you@example.com}
+    restart: unless-stopped
+
+  pipeline:
+    build:
+      context: ./pipeline
+      dockerfile: Dockerfile
+    container_name: waterwatcher-pipeline
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:you@example.com}
+      SCRAPE_INTERVAL_MINUTES: ${SCRAPE_INTERVAL_MINUTES:-60}
+      RAFT_WATCH_INTERVAL_MINUTES: ${RAFT_WATCH_INTERVAL_MINUTES:-15}
+      CRAIGSLIST_REGIONS: ${CRAIGSLIST_REGIONS:-seattle,portland,denver,saltlakecity,boise}
+    restart: unless-stopped
+
 volumes:
   pgdata:

@@ -1,84 +1,89 @@
-# 🌊 Water-Watcher — Whitewater Rafting Tracker
+# Water-Watcher
 
-A web app for tracking whitewater rafting conditions across rivers. Scrapes multiple data sources for rafting quality, hazards, timing, campsites, and rapid-running guidance. Includes **Raft Watch** — a Craigslist gear deal monitor with filters and notifications.
+**Whitewater rafting condition tracker and gear deal monitor.**
 
-## Data Sources
+Track river conditions in real time, get hazard alerts, browse rapid guides and campsites, and never miss a deal on rafting gear. Water-Watcher scrapes multiple data sources on a schedule and delivers push notifications when conditions change or gear deals match your filters.
 
-- **American Whitewater** — river conditions, flow data, rapid guides
-- **BLM / National Forest Service** — permits, closures, campsite info
-- **Facebook groups** — community reports, local conditions
-- **USGS Water Services** — real-time gauge/flow data
-- **Craigslist** — rafting gear deals (Raft Watch)
+## Features
+
+- **River Dashboard** - Live flow rates, gauge heights, water temps, and quality ratings
+- **Multi-Source Scraping** - USGS, American Whitewater, Craigslist, with priority-based data merging
+- **Raft Watch** - Craigslist gear deal monitor with scored matching against custom filters
+- **Hazard Alerts** - Strainers, logjams, closures, permit requirements
+- **Rapid Guides** - Difficulty ratings and run instructions per rapid
+- **Campsite Info** - Locations, amenities, permit requirements
+- **Push Notifications** - Opt-in alerts for condition changes and deal matches
+- **Dark Mode** - System-aware theme with manual toggle
+- **Responsive UI** - Desktop sidebar + mobile bottom tab bar
 
 ## Tech Stack
 
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| **Frontend** | Next.js 15 (App Router) + TypeScript | Full-stack framework, SSR, API routes |
-| **Styling** | Tailwind CSS + shadcn/ui | Rapid, responsive UI development |
-| **Database** | PostgreSQL | Concurrent access from web + pipeline |
-| **Web ORM** | Prisma | Type-safe DB access from Next.js |
-| **Scraping** | Python 3.11+ | Best scraping ecosystem (BS4, Playwright) |
-| **Pipeline ORM** | SQLAlchemy | Python DB access for scrapers |
-| **Scheduling** | APScheduler | Lightweight, in-process job scheduling |
-| **Notifications** | Web Push API + email | Real-time alerts for conditions & deals |
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 15 (App Router) + TypeScript |
+| Styling | Tailwind CSS v4 + shadcn/ui |
+| Database | PostgreSQL 16 |
+| Web ORM | Prisma |
+| Scraping | Python 3.12 + httpx + BeautifulSoup4 |
+| Pipeline ORM | SQLAlchemy 2.0 |
+| Scheduling | APScheduler |
+| Notifications | Web Push API (pywebpush) |
+| Testing | Vitest (web) + pytest (pipeline) |
+| Containerization | Docker + Docker Compose |
 
-## Project Structure
+## Screenshots
 
-```
-Water-Watcher/
-├── web/                    # Next.js 15 web application
-│   ├── src/
-│   │   ├── app/            # App Router pages & API routes
-│   │   ├── components/     # React components
-│   │   ├── lib/            # Utilities, DB client, helpers
-│   │   └── types/          # TypeScript type definitions
-│   ├── prisma/             # Database schema & migrations
-│   └── public/             # Static assets
-├── pipeline/               # Python scraping pipeline
-│   ├── scrapers/           # Per-source scraper modules
-│   ├── processors/         # Data normalization & enrichment
-│   ├── notifiers/          # Notification dispatch (push, email)
-│   ├── models/             # SQLAlchemy models
-│   ├── config/             # Pipeline configuration
-│   └── main.py             # Entry point + scheduler
-├── docker-compose.yml      # Local dev: PostgreSQL
-├── .env.example            # Environment variable template
-└── README.md
-```
+> _Screenshots coming soon. Run the app locally to see the UI._
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 20+
-- Python 3.11+
-- PostgreSQL 15+ (or use Docker)
-- pnpm (recommended) or npm
+- [Node.js 20+](https://nodejs.org/) with pnpm
+- [Python 3.12+](https://www.python.org/)
+- [Docker](https://www.docker.com/) and Docker Compose
+- (Optional) VAPID keys for push notifications
 
-### 1. Clone and configure
+### Quick Start (Docker)
 
 ```bash
+# Clone the repo
+git clone https://github.com/your-org/Water-Watcher.git
+cd Water-Watcher
+
+# Configure environment
 cp .env.example .env
-# Edit .env with your database URL and API keys
+# Edit .env - the defaults work for local Docker
+
+# Start all services
+docker compose up -d
+
+# Seed demo data
+docker compose exec web npx tsx prisma/seed.ts
+
+# Open http://localhost:3000
 ```
 
-### 2. Start the database
+### Local Development
+
+#### 1. Start the database
 
 ```bash
-docker compose up -d
+docker compose up postgres -d
 ```
 
-### 3. Set up the web app
+#### 2. Set up the web app
 
 ```bash
 cd web
 pnpm install
-pnpm prisma db push
-pnpm dev
+npx prisma db push
+npx prisma generate
+pnpm run db:seed    # seed demo data
+pnpm dev            # http://localhost:3000
 ```
 
-### 4. Set up the scraping pipeline
+#### 3. Set up the scraping pipeline
 
 ```bash
 cd pipeline
@@ -88,41 +93,104 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### Generate VAPID Keys
+
+Push notifications require VAPID keys. Generate them and add to `.env`:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+## Project Structure
+
+```
+Water-Watcher/
+├── web/                    # Next.js 15 web application
+│   ├── src/
+│   │   ├── app/            # App Router pages & API routes
+│   │   ├── components/     # React components (UI + domain)
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── lib/            # Utilities, DB client, validations
+│   │   └── types/          # TypeScript type definitions
+│   ├── prisma/             # Schema, migrations, seed script
+│   └── public/             # Static assets + service worker
+├── pipeline/               # Python scraping pipeline
+│   ├── scrapers/           # Per-source scraper modules
+│   ├── processors/         # Data normalization & matching
+│   ├── notifiers/          # Push notification dispatch
+│   ├── models/             # SQLAlchemy models
+│   ├── config/             # Pipeline settings
+│   └── tests/              # pytest test suite
+├── docker-compose.yml      # Full multi-service config
+└── .env.example            # Environment variable template
+```
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/health` | Health check with DB connectivity probe |
+| `GET` | `/api/rivers` | List rivers (paginated: `limit`, `offset`) |
+| `POST` | `/api/rivers` | Create a new river |
+| `GET` | `/api/rivers/:id` | River detail with conditions, hazards, rapids, campsites |
+| `PATCH` | `/api/rivers/:id` | Update river fields |
+| `DELETE` | `/api/rivers/:id` | Delete river (cascades to all child records) |
+| `GET` | `/api/deals` | List gear deals (filter: `category`, `search`, `maxPrice`) |
+| `GET` | `/api/deals/filters` | List deal filters for a user |
+| `POST` | `/api/deals/filters` | Create a deal filter |
+| `GET` | `/api/deals/filters/:id` | Get a specific deal filter |
+| `PATCH` | `/api/deals/filters/:id` | Update a deal filter (ownership validated) |
+| `DELETE` | `/api/deals/filters/:id` | Delete a deal filter |
+| `POST` | `/api/notifications/subscribe` | Register a push subscription |
+
+## Testing
+
+### Web (Vitest)
+
+```bash
+cd web
+pnpm test              # run once
+pnpm test:watch        # watch mode
+pnpm test:coverage     # with coverage report
+```
+
+### Pipeline (pytest)
+
+```bash
+cd pipeline
+pip install -r requirements-dev.txt
+pytest tests/ -v
+```
+
 ## Architecture
 
-### Data Flow
-
 ```
-[Data Sources] → [Python Scrapers] → [Processors] → [PostgreSQL]
-                                                          ↓
-                                                    [Next.js API]
-                                                          ↓
-                                                    [React UI]
-
-[Craigslist] → [Raft Watch Scraper] → [Match Filters] → [Notifications]
+[USGS / AW / Craigslist]
+        |
+   Python Scrapers
+        |
+   Processors (normalize, score, merge)
+        |
+   PostgreSQL
+        |
+   Next.js API Routes
+        |
+   React Frontend <-> Push Notifications
 ```
 
-### Key API Endpoints
+- **Prisma** owns the database schema. SQLAlchemy models mirror it.
+- Scrapers run on a schedule via APScheduler (river conditions every 4h, deals every 30m).
+- Condition data is merged using a source priority system (USGS > AW > BLM > Facebook).
+- Deal matching uses scored evaluation (0-100) with configurable thresholds.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/rivers` | List tracked rivers |
-| GET | `/api/rivers/:id` | River detail + latest conditions |
-| POST | `/api/rivers` | Add a river to track |
-| GET | `/api/rivers/:id/conditions` | Condition history |
-| GET | `/api/rivers/:id/hazards` | Current hazards & alerts |
-| GET | `/api/rivers/:id/campsites` | Nearby campsites |
-| GET | `/api/deals` | Raft Watch gear deals |
-| POST | `/api/deals/filters` | Create/update deal filter |
-| POST | `/api/notifications/subscribe` | Subscribe to push notifications |
-| GET | `/api/user/preferences` | User preferences |
+## Contributing
 
-## Development
-
-- **Web app** runs on `http://localhost:3000`
-- **Pipeline** runs as a background process with configurable schedules
-- Both share the same PostgreSQL database
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Run tests before committing (`pnpm test` in web, `pytest` in pipeline)
+4. Commit with descriptive messages
+5. Open a pull request against `main`
 
 ## License
 
-Private — Spencer Fowers
+MIT

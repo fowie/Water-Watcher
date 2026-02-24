@@ -10,6 +10,24 @@ export const metadata: Metadata = {
   },
   description:
     "Track whitewater rafting conditions, hazards, and gear deals across rivers.",
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏞️</text></svg>",
+  },
+  openGraph: {
+    title: "Water-Watcher — Whitewater Rafting Tracker",
+    description:
+      "Monitor river conditions, active hazards, rapids, and find gear deals for your next whitewater adventure.",
+    siteName: "Water-Watcher",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: "Water-Watcher — Whitewater Rafting Tracker",
+    description:
+      "Monitor river conditions, active hazards, rapids, and find gear deals for your next whitewater adventure.",
+  },
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"),
 };
 
 export default function RootLayout({

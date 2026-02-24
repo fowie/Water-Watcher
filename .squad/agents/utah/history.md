@@ -136,3 +136,22 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 4 cross-agent — from Pappas):** Added 51 new web tests (148 → 199) covering api-errors helpers, health endpoint edge cases, PATCH rivers, and PATCH deal filters. Seed script type-checks cleanly. Total: 477 tests (199 web + 278 pipeline).
 
 **2026-02-24 (Round 4 cross-agent — from Coordinator):** Fixed `timeAgo` bugs — added "weeks ago" bucket for 7-27 days, graceful fallback for invalid date inputs.
+
+**2026-02-24:** Docker production config, CI workflow, and README overhaul:
+
+### Docker
+- Created `web/Dockerfile` — multi-stage build (deps → build → production). Node 20 Alpine, pnpm install, Prisma generate, Next.js standalone output. Production stage copies `.next/standalone` + static + Prisma client.
+- Created `pipeline/Dockerfile` — Python 3.12-slim with system deps (gcc, libpq, libxml2), pip install, Playwright chromium. Runs `python main.py`.
+- Updated `docker-compose.yml` — 4 services: `postgres` (unchanged), `db-migrate` (runs `prisma db push` using builder stage, waits for healthy postgres), `web` (depends on migrate, exposes 3000), `pipeline` (depends on migrate, runs scrapers). All env vars passed through with defaults.
+- Added `output: "standalone"` to `web/next.config.ts` for Docker-compatible Next.js build.
+- Created `.dockerignore` files for both web and pipeline to keep images lean.
+
+### CI
+- Created `.github/workflows/ci.yml` with 4 jobs: web-test (vitest), web-build (next build for type checking), web-lint (eslint), pipeline-test (pytest). All use caching (pnpm cache, pip cache). Triggers on push to main/dev and PRs.
+- Existing `squad-ci.yml` was a placeholder — new `ci.yml` is the real workflow.
+
+### README
+- Rewrote `README.md` — project description, full feature list, tech stack table, getting started (Docker quick start + local dev), project structure, complete API endpoint table (13 routes), testing commands, architecture diagram, contributing guide, MIT license.
+
+### .env.example
+- Added Docker Compose DATABASE_URL comment showing `postgres` as hostname instead of `localhost`.
