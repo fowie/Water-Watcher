@@ -12,6 +12,7 @@ import {
   Home,
   Menu,
   X,
+  Settings,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -19,6 +20,7 @@ const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/rivers", label: "Rivers", icon: Mountain },
   { href: "/deals", label: "Raft Watch", icon: ShoppingBag },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Navigation() {
@@ -44,7 +46,7 @@ function DesktopNav() {
       </div>
 
       {/* Nav links */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1" aria-label="Main navigation">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
@@ -95,8 +97,10 @@ function MobileNav() {
             variant="ghost"
             size="icon"
             onClick={() => setSheetOpen(!sheetOpen)}
+            aria-label={sheetOpen ? "Close menu" : "Open menu"}
+            aria-expanded={sheetOpen}
           >
-            {sheetOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {sheetOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
           </Button>
         </div>
       </header>
@@ -115,11 +119,12 @@ function MobileNav() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setSheetOpen(false)}
+                aria-label="Close menu"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </Button>
             </div>
-            <nav className="px-3 py-4 space-y-1">
+            <nav className="px-3 py-4 space-y-1" aria-label="Mobile navigation">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const active =
@@ -148,7 +153,7 @@ function MobileNav() {
       )}
 
       {/* Bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-[var(--border)] bg-[var(--background)]/95 backdrop-blur-sm z-40 flex items-center justify-around px-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-[var(--border)] bg-[var(--background)]/95 backdrop-blur-sm z-40 flex items-center justify-around px-2" aria-label="Bottom tab bar">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active =

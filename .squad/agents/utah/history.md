@@ -93,3 +93,40 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 - Returns 204 on success, 404 if river not found, 500 on error
 - Prisma schema has `onDelete: Cascade` on all river relations, so conditions/hazards/campsites/rapids/trackedBy are automatically cleaned up
 - Added 3 tests (success, 404, 500) — all 122 vitest tests pass
+
+**2026-02-24:** Built health endpoint, PATCH APIs, and API error helper:
+
+### API Error Helper (`web/src/lib/api-errors.ts`)
+- `apiError(status, message)` — returns `NextResponse.json({ error }, { status })`, replaces inline error construction
+- `handleApiError(error)` — logs error, returns safe 500 with "Internal server error" (no stack trace leaking)
+- Refactored `rivers/route.ts`, `rivers/[id]/route.ts`, and `deals/filters/route.ts` to use these helpers
+
+### Health Endpoint (`web/src/app/api/health/route.ts`)
+- GET `/api/health` returns `{ status: "ok", timestamp, version: "0.1.0" }` on 200
+- Tries `prisma.$queryRaw\`SELECT 1\`` to check DB connectivity
+- Returns `{ status: "degraded", ... }` with 503 if DB unreachable
+
+### PATCH River (`web/src/app/api/rivers/[id]/route.ts`)
+- Added PATCH handler alongside existing GET and DELETE
+- Uses `riverUpdateSchema` (in validations.ts) — partial updates to name, state, region, latitude, longitude, difficulty, description, imageUrl
+- Nullable fields supported (can set region/description/etc to null)
+- Returns updated river, 404 if not found, 400 for validation errors
+
+### PATCH Deal Filter (`web/src/app/api/deals/filters/[id]/route.ts`)
+- New route with GET, PATCH, DELETE handlers
+- PATCH validates ownership: requires `userId` in body, checks it matches filter's owner
+- Returns 403 if wrong user, 404 if not found, 400 for invalid data
+- Uses `dealFilterUpdateSchema` — partial updates to name, keywords, categories, maxPrice, regions, isActive
+
+### Validation Schemas (`web/src/lib/validations.ts`)
+- Added `riverUpdateSchema` — all fields optional, nullable where Prisma allows null (region, lat, lon, etc)
+- Added `dealFilterUpdateSchema` — all fields optional, maxPrice nullable
+
+### API Client (`web/src/lib/api.ts`)
+- Added `updateRiver(id, data)`, `updateDealFilter(id, userId, data)`, `getHealth()`
+- Added imports for `RiverUpdateInput`, `DealFilterUpdateInput` types
+
+### Test Coverage
+- 168 vitest tests passing (up from 135), build clean
+- New test files: `health.test.ts` (3 tests), `deals-filters-id.test.ts` (11 tests)
+- Added 6 PATCH tests to `rivers.test.ts` (valid update, 404, bad latitude, empty name, nullable fields, DB error)

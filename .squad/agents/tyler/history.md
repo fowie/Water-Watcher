@@ -119,3 +119,40 @@
 - Respects `prefers-color-scheme` on first load if no stored preference
 - Added to desktop sidebar footer and mobile top header bar in `navigation.tsx`
 - CSS: `html.dark { ... }` block in `globals.css` mirrors existing `@media (prefers-color-scheme: dark)` variables
+
+**2026-02-24:** Settings page, edit river dialog, MapLink component, and accessibility improvements:
+
+### Settings Page (`web/src/app/settings/page.tsx`)
+- Three sections: Notification Preferences, Data Management, About
+- Notification Preferences: fetches deal filters via `getDealFilters`, shows toggle switches per filter with active count badge, updates via `updateDealFilter` API
+- Data Management: "Check Connection" button (calls `/api/health`), "Clear Cache" button (clears localStorage except theme)
+- About: shows "Water-Watcher v0.1.0" badge, GitHub link
+- Added Settings to `navItems` in `navigation.tsx` (uses `Settings` icon from lucide-react)
+- Route layout `web/src/app/settings/layout.tsx` exports metadata `{ title: "Settings" }`
+
+### Edit River Dialog (`web/src/components/edit-river-dialog.tsx`)
+- Pre-fills form with current `RiverDetail` data via `defaultValue` props
+- Validates with `riverUpdateSchema` from `web/src/lib/validations.ts` (safeParse)
+- Calls `updateRiver(id, data)` from `web/src/lib/api.ts` (PATCH `/api/rivers/[id]`)
+- Toast notifications on success/error via `useToast` hook
+- Added to river detail page header next to notification toggle
+- River detail page refactored: data loading moved to `loadRiver` callback so edit dialog can trigger refresh
+
+### MapLink Component (`web/src/components/map-link.tsx`)
+- Props: `latitude`, `longitude`, `label`, `showLabel`, `className`
+- Generates Google Maps URL: `https://www.google.com/maps?q={lat},{lng}`
+- Uses `MapPin` icon from lucide-react
+- Includes `aria-label` with descriptive text
+- Replaced inline Google Maps `<a>` tags in river detail campsites tab
+- Added to river detail header when river has coordinates
+
+### Accessibility Improvements
+- **Skip-to-content link**: Added in `web/src/app/layout.tsx`, uses `sr-only` with `focus:not-sr-only` for keyboard users
+- **`aria-label` on icon buttons**: ThemeToggle, delete button on RiverCard, menu button/close button on mobile nav, deal card "View" link
+- **`aria-hidden="true"` on decorative icons**: All lucide icons in buttons/links marked as decorative
+- **`role` attributes**: Notification toggle group has `role="group"`, main content wrapper has `role="main"`
+- **`aria-expanded`**: Mobile menu button reflects sheet open state
+- **`aria-label` on nav elements**: Desktop sidebar `<nav>`, mobile sheet `<nav>`, bottom tab bar `<nav>` all have `aria-label`
+- **Page-level titles**: Root layout uses `title.template` pattern (`"%s | Water-Watcher"`). Route layouts for `/rivers`, `/deals`, `/settings` export metadata titles
+- **Keyboard focus**: Delete button on RiverCard now shows on `focus:opacity-100` (not just hover)
+- **`sr-only` labels**: Filter toggle switches on settings page have screen-reader-only labels

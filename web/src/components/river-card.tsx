@@ -38,10 +38,11 @@ export function RiverCard({ river, onDelete }: RiverCardProps) {
         {onDelete && (
           <button
             onClick={handleDelete}
-            className="absolute top-3 right-3 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity bg-[var(--muted)] hover:bg-[var(--destructive)] hover:text-white text-[var(--muted-foreground)]"
+            className="absolute top-3 right-3 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-[var(--muted)] hover:bg-[var(--destructive)] hover:text-white text-[var(--muted-foreground)]"
             title="Delete river"
+            aria-label={`Delete ${river.name}`}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         )}
         <CardHeader className="pb-3">

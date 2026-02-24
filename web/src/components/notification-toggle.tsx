@@ -42,17 +42,18 @@ export function NotificationToggle({
   };
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center space-x-2" role="group" aria-label="Notification settings">
       {enabled ? (
-        <Bell className="h-4 w-4 text-[var(--primary)]" />
+        <Bell className="h-4 w-4 text-[var(--primary)]" aria-hidden="true" />
       ) : (
-        <BellOff className="h-4 w-4 text-[var(--muted-foreground)]" />
+        <BellOff className="h-4 w-4 text-[var(--muted-foreground)]" aria-hidden="true" />
       )}
       <Switch
         id={`notify-${riverId}`}
         checked={enabled}
         onCheckedChange={handleToggle}
         disabled={loading}
+        aria-label={enabled ? "Disable notifications" : "Enable notifications"}
       />
       <Label htmlFor={`notify-${riverId}`} className="text-sm cursor-pointer">
         {enabled ? "Notifications on" : "Notify me"}

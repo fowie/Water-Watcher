@@ -16,6 +16,19 @@ export const riverSchema = z.object({
 
 export type RiverInput = z.infer<typeof riverSchema>;
 
+export const riverUpdateSchema = z.object({
+  name: z.string().min(1, "River name is required").optional(),
+  state: z.string().min(1, "State is required").optional(),
+  region: z.string().nullable().optional(),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  difficulty: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  imageUrl: z.string().url().nullable().optional(),
+});
+
+export type RiverUpdateInput = z.infer<typeof riverUpdateSchema>;
+
 // ─── Deal Filters ─────────────────────────────────────────
 
 export const dealFilterSchema = z.object({
@@ -28,6 +41,17 @@ export const dealFilterSchema = z.object({
 });
 
 export type DealFilterInput = z.infer<typeof dealFilterSchema>;
+
+export const dealFilterUpdateSchema = z.object({
+  name: z.string().min(1, "Filter name is required").optional(),
+  keywords: z.array(z.string()).min(1, "At least one keyword is required").optional(),
+  categories: z.array(z.string()).optional(),
+  maxPrice: z.number().positive().nullable().optional(),
+  regions: z.array(z.string()).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export type DealFilterUpdateInput = z.infer<typeof dealFilterUpdateSchema>;
 
 // ─── Push Subscription ───────────────────────────────────
 

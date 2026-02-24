@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { dealFilterSchema } from "@/lib/validations";
+import { apiError, handleApiError } from "@/lib/api-errors";
 
 export async function GET(request: Request) {
   try {
@@ -8,10 +9,7 @@ export async function GET(request: Request) {
     const userId = searchParams.get("userId");
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "userId is required" },
-        { status: 400 }
-      );
+      return apiError(400, "userId is required");
     }
 
     const filters = await prisma.dealFilter.findMany({
@@ -24,11 +22,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(filters);
   } catch (error) {
-    console.error("GET /api/deals/filters error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch deal filters" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -38,19 +32,13 @@ export async function POST(request: Request) {
     const { userId, ...filterData } = body;
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "userId is required" },
-        { status: 400 }
-      );
+      return apiError(400, "userId is required");
     }
 
     // Verify user exists
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return apiError(404, "User not found");
     }
 
     const parsed = dealFilterSchema.safeParse(filterData);
@@ -70,10 +58,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(filter, { status: 201 });
   } catch (error) {
-    console.error("POST /api/deals/filters error:", error);
-    return NextResponse.json(
-      { error: "Failed to create deal filter" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

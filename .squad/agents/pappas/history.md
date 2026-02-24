@@ -44,6 +44,15 @@
 - Added 3 deal filter edge cases to `deals-filters.test.ts`: non-existent user returns 404 (verifies `findUnique` guard), special ASCII characters in keywords pass validation, unicode/emoji keywords pass validation.
 - Final counts: **web 148 tests** (was 119), **pipeline 278 tests** (unchanged).
 
+**2026-02-24:** Round 4 — Testing new Round 3 & 4 features:
+- Created `web/src/__tests__/api-errors.test.ts` (13 tests): `apiError` returns correct status/message/content-type, `handleApiError` returns 500 safe message, does not leak stack traces or internal details, handles non-Error objects and null/undefined, logs original error.
+- Extended `health.test.ts` from 3 → 9 tests: added version check, degraded response includes timestamp+version, content-type check, timestamp proximity check, response shape validation for both ok and degraded states.
+- Extended `rivers.test.ts` PATCH tests from 6 → 12 tests: full update with all fields, unknown fields stripped, invalid longitude, imageUrl validation (valid URL, reject non-URL, nullable).
+- Extended `deals-filters-id.test.ts` PATCH tests from 7 → 14 tests: empty keywords array rejected, unknown fields stripped, maxPrice nullable, zero maxPrice rejected (must be positive), multi-field update, empty name rejected.
+- Seed script (`web/prisma/seed.ts`) passes `tsc --noEmit` type checking cleanly.
+- Dashboard page (`web/src/app/page.tsx`) is a "use client" React component — no jsdom/testing-library installed, so component rendering tests not feasible in current setup. Noted as future coverage gap.
+- Final counts: **web 199 tests** (was 148), **pipeline 278 tests** (unchanged).
+
 ---
 
 ## Cross-Agent Updates

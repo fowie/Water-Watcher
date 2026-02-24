@@ -25,5 +25,7 @@ export { RapidRating } from "./rapid-rating";
 export { FlowTrend } from "./flow-trend";
 export { AddRiverDialog } from "./add-river-dialog";
 export { CreateFilterDialog } from "./create-filter-dialog";
+export { EditRiverDialog } from "./edit-river-dialog";
 export { NotificationToggle } from "./notification-toggle";
+export { MapLink } from "./map-link";
 export { Navigation } from "./navigation";

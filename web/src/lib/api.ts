@@ -4,7 +4,7 @@ import type {
   GearDealRecord,
   DealFilterRecord,
 } from "@/types";
-import type { RiverInput, DealFilterInput } from "@/lib/validations";
+import type { RiverInput, RiverUpdateInput, DealFilterInput, DealFilterUpdateInput } from "@/lib/validations";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -73,6 +73,13 @@ export async function deleteRiver(id: string): Promise<void> {
   }
 }
 
+export async function updateRiver(id: string, data: RiverUpdateInput) {
+  return fetcher<RiverDetail>(`/api/rivers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 // ─── Deals ──────────────────────────────────────────────
 
 export interface DealsResponse {
@@ -117,6 +124,30 @@ export async function createDealFilter(
     method: "POST",
     body: JSON.stringify({ userId, ...data }),
   });
+}
+
+export async function updateDealFilter(
+  id: string,
+  userId: string,
+  data: DealFilterUpdateInput
+) {
+  return fetcher<DealFilterRecord>(`/api/deals/filters/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ userId, ...data }),
+  });
+}
+
+// ─── Health ─────────────────────────────────────────────
+
+export interface HealthResponse {
+  status: "ok" | "degraded";
+  timestamp: string;
+  version: string;
+}
+
+export async function getHealth(): Promise<HealthResponse> {
+  const res = await fetch(`${BASE}/api/health`);
+  return res.json();
 }
 
 // ─── Notifications ──────────────────────────────────────

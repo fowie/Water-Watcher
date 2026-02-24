@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { riverSchema } from "@/lib/validations";
+import { handleApiError } from "@/lib/api-errors";
 
 export async function GET(request: Request) {
   try {
@@ -45,11 +46,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ rivers, total, limit, offset });
   } catch (error) {
-    console.error("GET /api/rivers error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch rivers" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }
 
@@ -71,10 +68,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(river, { status: 201 });
   } catch (error) {
-    console.error("POST /api/rivers error:", error);
-    return NextResponse.json(
-      { error: "Failed to create river" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
 }

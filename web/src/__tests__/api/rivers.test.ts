@@ -19,6 +19,7 @@ const mockPrisma = vi.hoisted(() => ({
     findUnique: vi.fn(),
     count: vi.fn(),
     delete: vi.fn(),
+    update: vi.fn(),
   },
 }));
 
@@ -27,7 +28,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 import { GET, POST } from "@/app/api/rivers/route";
-import { GET as GET_DETAIL, DELETE } from "@/app/api/rivers/[id]/route";
+import { GET as GET_DETAIL, DELETE, PATCH } from "@/app/api/rivers/[id]/route";
 
 // Helper to create mock Request objects
 function mockRequest(url: string, options: RequestInit = {}): Request {
@@ -509,6 +510,214 @@ describe("DELETE /api/rivers/:id", () => {
     const data = await res.json();
 
     expect(res.status).toBe(500);
-    expect(data.error).toBe("Failed to delete river");
+    expect(data.error).toBe("Internal server error");
+  });
+});
+
+describe("PATCH /api/rivers/:id", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("updates a river with valid partial data", async () => {
+    const existing = { id: "river-1", name: "Colorado River", state: "CO" };
+    const updated = { ...existing, name: "Colorado River (Gore Canyon)" };
+    mockPrisma.river.findUnique.mockResolvedValue(existing);
+    mockPrisma.river.update.mockResolvedValue(updated);
+
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Colorado River (Gore Canyon)" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.name).toBe("Colorado River (Gore Canyon)");
+    expect(mockPrisma.river.update).toHaveBeenCalledWith({
+      where: { id: "river-1" },
+      data: { name: "Colorado River (Gore Canyon)" },
+    });
+  });
+
+  it("returns 404 when river not found", async () => {
+    mockPrisma.river.findUnique.mockResolvedValue(null);
+
+    const req = mockRequest("http://localhost:3000/api/rivers/nonexistent", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Updated" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "nonexistent" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(404);
+    expect(data.error).toBe("River not found");
+    expect(mockPrisma.river.update).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for invalid latitude", async () => {
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ latitude: 999 }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("Invalid input");
+  });
+
+  it("returns 400 for empty name", async () => {
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts nullable fields (set region to null)", async () => {
+    const existing = { id: "river-1", name: "Test", state: "CO", region: "Front Range" };
+    const updated = { ...existing, region: null };
+    mockPrisma.river.findUnique.mockResolvedValue(existing);
+    mockPrisma.river.update.mockResolvedValue(updated);
+
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ region: null }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.region).toBeNull();
+  });
+
+  it("returns 500 on database error", async () => {
+    mockPrisma.river.findUnique.mockResolvedValue({ id: "river-1" });
+    mockPrisma.river.update.mockRejectedValue(new Error("DB error"));
+
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Updated" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(data.error).toBe("Internal server error");
+  });
+
+  it("full update with all supported fields", async () => {
+    const existing = { id: "river-1", name: "Old", state: "CO" };
+    const updatePayload = {
+      name: "Colorado River — Full Update",
+      state: "AZ",
+      region: "Southwest",
+      latitude: 36.1,
+      longitude: -112.1,
+      difficulty: "Class V",
+      description: "Updated description",
+    };
+    const updated = { id: "river-1", ...updatePayload };
+    mockPrisma.river.findUnique.mockResolvedValue(existing);
+    mockPrisma.river.update.mockResolvedValue(updated);
+
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatePayload),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.name).toBe("Colorado River — Full Update");
+    expect(data.latitude).toBe(36.1);
+    expect(data.difficulty).toBe("Class V");
+  });
+
+  it("strips unknown fields from update payload", async () => {
+    const existing = { id: "river-1", name: "Test", state: "CO" };
+    mockPrisma.river.findUnique.mockResolvedValue(existing);
+    mockPrisma.river.update.mockResolvedValue({ ...existing, name: "Updated" });
+
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Updated", hackerField: "evil", __proto__: {} }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+
+    expect(res.status).toBe(200);
+    // Verify prisma.update was NOT called with the unknown fields
+    const updateCall = mockPrisma.river.update.mock.calls[0][0];
+    expect(updateCall.data).not.toHaveProperty("hackerField");
+    expect(updateCall.data).toEqual({ name: "Updated" });
+  });
+
+  it("returns 400 for invalid longitude", async () => {
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ longitude: 999 }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("accepts imageUrl as valid URL", async () => {
+    const existing = { id: "river-1", name: "Test", state: "CO" };
+    const updated = { ...existing, imageUrl: "https://example.com/photo.jpg" };
+    mockPrisma.river.findUnique.mockResolvedValue(existing);
+    mockPrisma.river.update.mockResolvedValue(updated);
+
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: "https://example.com/photo.jpg" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.imageUrl).toBe("https://example.com/photo.jpg");
+  });
+
+  it("rejects imageUrl that is not a valid URL", async () => {
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: "not-a-url" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("allows setting imageUrl to null", async () => {
+    const existing = { id: "river-1", name: "Test", state: "CO", imageUrl: "https://example.com/old.jpg" };
+    const updated = { ...existing, imageUrl: null };
+    mockPrisma.river.findUnique.mockResolvedValue(existing);
+    mockPrisma.river.update.mockResolvedValue(updated);
+
+    const req = mockRequest("http://localhost:3000/api/rivers/river-1", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: null }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "river-1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(data.imageUrl).toBeNull();
   });
 });

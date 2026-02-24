@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import { ConditionBadge } from "@/components/condition-badge";
 import { HazardBadge } from "@/components/hazard-badge";
 import { RapidRating } from "@/components/rapid-rating";
 import { NotificationToggle } from "@/components/notification-toggle";
+import { EditRiverDialog } from "@/components/edit-river-dialog";
+import { MapLink } from "@/components/map-link";
 import { Button } from "@/components/ui/button";
 import { FlowTrend } from "@/components/flow-trend";
 import { getRiver } from "@/lib/api";
@@ -38,20 +40,21 @@ export default function RiverDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const data = await getRiver(id);
-        setRiver(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load river");
-      } finally {
-        setLoading(false);
-      }
+  const loadRiver = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getRiver(id);
+      setRiver(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load river");
+    } finally {
+      setLoading(false);
     }
-    load();
   }, [id]);
+
+  useEffect(() => {
+    loadRiver();
+  }, [loadRiver]);
 
   if (loading) {
     return (
@@ -106,8 +109,21 @@ export default function RiverDetailPage() {
                 {river.description}
               </p>
             )}
+            {river.latitude != null && river.longitude != null && (
+              <div className="mt-1">
+                <MapLink
+                  latitude={river.latitude}
+                  longitude={river.longitude}
+                  label={river.name}
+                  showLabel
+                />
+              </div>
+            )}
           </div>
-          <NotificationToggle riverId={river.id} />
+          <div className="flex items-center gap-3">
+            <EditRiverDialog river={river} onRiverUpdated={loadRiver} />
+            <NotificationToggle riverId={river.id} />
+          </div>
         </div>
       </div>
 
@@ -398,15 +414,11 @@ function CampsitesTab({ campsites }: { campsites: CampsiteRecord[] }) {
               <Tent className="h-4 w-4 text-[var(--primary)]" />
               {camp.name}
               {camp.latitude != null && camp.longitude != null && (
-                <a
-                  href={`https://www.google.com/maps?q=${camp.latitude},${camp.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[var(--muted-foreground)] hover:text-[var(--primary)] transition-colors"
-                  title="Open in Google Maps"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+                <MapLink
+                  latitude={camp.latitude}
+                  longitude={camp.longitude}
+                  label={camp.name}
+                />
               )}
             </CardTitle>
           </CardHeader>
@@ -444,15 +456,12 @@ function CampsitesTab({ campsites }: { campsites: CampsiteRecord[] }) {
                 </span>
               )}
               {camp.latitude != null && camp.longitude != null && (
-                <a
-                  href={`https://www.google.com/maps?q=${camp.latitude},${camp.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-[var(--primary)] hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Map
-                </a>
+                <MapLink
+                  latitude={camp.latitude}
+                  longitude={camp.longitude}
+                  label={camp.name}
+                  showLabel
+                />
               )}
             </div>
           </CardContent>

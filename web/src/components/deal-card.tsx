@@ -79,8 +79,9 @@ export function DealCard({ deal }: DealCardProps) {
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-[var(--primary)] hover:underline"
             onClick={(e) => e.stopPropagation()}
+            aria-label={`View deal: ${deal.title}`}
           >
-            View <ExternalLink className="h-3 w-3" />
+            View <ExternalLink className="h-3 w-3" aria-hidden="true" />
           </a>
         </div>
       </CardContent>

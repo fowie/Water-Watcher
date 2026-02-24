@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { riverUpdateSchema } from "@/lib/validations";
+import { dealFilterUpdateSchema } from "@/lib/validations";
 import { apiError, handleApiError } from "@/lib/api-errors";
 
 export async function GET(
@@ -10,32 +10,18 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const river = await prisma.river.findUnique({
+    const filter = await prisma.dealFilter.findUnique({
       where: { id },
       include: {
-        conditions: {
-          orderBy: { scrapedAt: "desc" },
-          take: 20,
-        },
-        hazards: {
-          where: { isActive: true },
-          orderBy: { reportedAt: "desc" },
-        },
-        campsites: true,
-        rapids: {
-          orderBy: { mile: "asc" },
-        },
-        _count: {
-          select: { trackedBy: true },
-        },
+        _count: { select: { matches: true } },
       },
     });
 
-    if (!river) {
-      return apiError(404, "River not found");
+    if (!filter) {
+      return apiError(404, "Deal filter not found");
     }
 
-    return NextResponse.json(river);
+    return NextResponse.json(filter);
   } catch (error) {
     return handleApiError(error);
   }
@@ -49,7 +35,8 @@ export async function PATCH(
     const { id } = await params;
     const body = await request.json();
 
-    const parsed = riverUpdateSchema.safeParse(body);
+    // Validate the update payload
+    const parsed = dealFilterUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid input", details: parsed.error.flatten() },
@@ -57,12 +44,22 @@ export async function PATCH(
       );
     }
 
-    const existing = await prisma.river.findUnique({ where: { id } });
+    // Look up the filter
+    const existing = await prisma.dealFilter.findUnique({ where: { id } });
     if (!existing) {
-      return apiError(404, "River not found");
+      return apiError(404, "Deal filter not found");
     }
 
-    const updated = await prisma.river.update({
+    // Ownership check: userId must be provided and must match the filter owner
+    const userId = body.userId;
+    if (!userId) {
+      return apiError(400, "userId is required");
+    }
+    if (existing.userId !== userId) {
+      return apiError(403, "Not authorized to update this filter");
+    }
+
+    const updated = await prisma.dealFilter.update({
       where: { id },
       data: parsed.data,
     });
@@ -80,12 +77,12 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const existing = await prisma.river.findUnique({ where: { id } });
+    const existing = await prisma.dealFilter.findUnique({ where: { id } });
     if (!existing) {
-      return apiError(404, "River not found");
+      return apiError(404, "Deal filter not found");
     }
 
-    await prisma.river.delete({ where: { id } });
+    await prisma.dealFilter.delete({ where: { id } });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
