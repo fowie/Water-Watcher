@@ -146,3 +146,24 @@ Sentinel object (`_SENTINEL = object()`) as default in mock factories to disting
 **Status:** Accepted — **Date:** 2025-06-25 — **By:** Pappas
 
 Python: `pipeline/tests/` with conftest.py. TypeScript: `web/src/__tests__/` mirroring API structure. Commands: `pytest tests/`, `npx vitest run`.
+
+---
+
+## BD-004: datetime.utcnow() Deprecation Fix
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Replaced all `datetime.utcnow()` calls with `datetime.now(timezone.utc)` across the entire pipeline (8 files, ~30 occurrences). This eliminates the Python 3.12+ deprecation warning and produces timezone-aware UTC datetimes. A `_utc_now()` helper is used for SQLAlchemy column defaults and dataclass `default_factory`. Also added `_validate_startup()` to `main.py` for missing `DATABASE_URL` / VAPID key warnings.
+
+---
+
+## FE-005: Shared EmptyState + Skeleton + Toast Components
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+EmptyState: reusable component with `icon`, `title`, `description`, `children` props. Skeleton: CSS `animate-pulse` primitive; loading states render card-shaped skeleton grids. Toast: Radix Toast + `useToast` hook with module-level state/listener pattern; three variants (default, destructive, success), wired into root layout. Mobile nav active-route detection confirmed correct.
+
+---
+
+## TST-001: Test Coverage Expansion — Edge Cases
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+Added 38 new edge case tests (21 web, 17 pipeline; totals: 119 web, 147 pipeline). Findings: rivers API lacks input clamping (recommend aligning with deals route pattern); `$0` price is falsy in `deal_matcher._score_match()` (safe but under-scores free items); no test coverage for `craigslist.py`, `american_whitewater.py`, `push_notifier.py`, or component rendering. Next priorities: Craigslist scraper tests, push notifier tests, rivers route validation hardening.
