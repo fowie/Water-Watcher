@@ -3,8 +3,12 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 @dataclass
@@ -13,7 +17,7 @@ class ScrapedItem:
     source: str
     source_url: str | None = None
     data: dict[str, Any] = field(default_factory=dict)
-    scraped_at: datetime = field(default_factory=datetime.utcnow)
+    scraped_at: datetime = field(default_factory=_utc_now)
 
 
 class BaseScraper(ABC):

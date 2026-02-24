@@ -4,7 +4,11 @@ These models mirror the Prisma schema so the Python pipeline can read/write
 to the same PostgreSQL database that Next.js uses.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def _utc_now():
+    return datetime.now(timezone.utc)
 from sqlalchemy import (
     Column,
     String,
@@ -28,8 +32,8 @@ class User(Base):
     id = Column(String, primary_key=True)
     email = Column(String, unique=True)
     name = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
 
     tracked_rivers = relationship("UserRiver", back_populates="user")
     deal_filters = relationship("DealFilter", back_populates="user")
@@ -50,8 +54,8 @@ class River(Base):
     aw_id = Column(String, unique=True)
     usgs_gauge_id = Column(String)
     image_url = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
 
     conditions = relationship("RiverCondition", back_populates="river")
     hazards = relationship("Hazard", back_populates="river")
@@ -72,7 +76,7 @@ class RiverCondition(Base):
     source_url = Column(String)
     raw_data = Column(JSON)
     scraped_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     river = relationship("River", back_populates="conditions")
 
@@ -95,7 +99,7 @@ class Hazard(Base):
     reported_at = Column(DateTime, nullable=False)
     expires_at = Column(DateTime)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     river = relationship("River", back_populates="hazards")
 
@@ -118,7 +122,7 @@ class GearDeal(Base):
     posted_at = Column(DateTime)
     scraped_at = Column(DateTime, nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     matched_filters = relationship("DealFilterMatch", back_populates="deal")
 
@@ -139,8 +143,8 @@ class DealFilter(Base):
     max_price = Column(Float)
     regions = Column(ARRAY(String))
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
 
     user = relationship("User", back_populates="deal_filters")
     matches = relationship("DealFilterMatch", back_populates="filter")
@@ -153,7 +157,7 @@ class DealFilterMatch(Base):
     filter_id = Column(String, ForeignKey("deal_filters.id", ondelete="CASCADE"), nullable=False)
     deal_id = Column(String, ForeignKey("gear_deals.id", ondelete="CASCADE"), nullable=False)
     notified = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     filter = relationship("DealFilter", back_populates="matches")
     deal = relationship("GearDeal", back_populates="matched_filters")
@@ -167,7 +171,7 @@ class PushSubscription(Base):
     endpoint = Column(String, unique=True, nullable=False)
     p256dh = Column(String, nullable=False)
     auth = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     user = relationship("User", back_populates="push_subscriptions")
 
@@ -179,7 +183,7 @@ class UserRiver(Base):
     user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     river_id = Column(String, ForeignKey("rivers.id", ondelete="CASCADE"), nullable=False)
     notify = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     user = relationship("User", back_populates="tracked_rivers")
     river = relationship("River", back_populates="tracked_by")
@@ -196,7 +200,7 @@ class ScrapeLog(Base):
     duration = Column(Integer)
     started_at = Column(DateTime, nullable=False)
     finished_at = Column(DateTime)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utc_now)
 
     __table_args__ = (
         Index("ix_scrape_logs_source_started", "source", "started_at"),

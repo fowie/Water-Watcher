@@ -19,7 +19,7 @@ import random
 import re
 import time
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import quote_plus, urljoin
 
 import httpx
@@ -400,7 +400,7 @@ class CraigslistScraper(BaseScraper):
                                         "region": region,
                                         "posted_at": listing.get("posted_at"),
                                     },
-                                    scraped_at=datetime.utcnow(),
+                                    scraped_at=datetime.now(timezone.utc),
                                 )
                             )
                             region_count += 1

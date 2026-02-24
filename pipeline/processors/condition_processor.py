@@ -14,7 +14,7 @@ Key responsibilities:
 
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from models import SessionLocal, River, RiverCondition, ScrapeLog
 from scrapers.base import ScrapedItem
@@ -132,7 +132,7 @@ class ConditionProcessor:
             List of dicts summarizing what was processed.
         """
         session = SessionLocal()
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         processed = []
 
         try:
@@ -207,14 +207,14 @@ class ConditionProcessor:
                 processed.append(result)
 
             # Log the scrape
-            duration = int((datetime.utcnow() - started_at).total_seconds() * 1000)
+            duration = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)
             scrape_log = ScrapeLog(
                 id=str(uuid.uuid4()),
                 source=source,
                 status="success",
                 item_count=len(processed),
                 started_at=started_at,
-                finished_at=datetime.utcnow(),
+                finished_at=datetime.now(timezone.utc),
                 duration=duration,
             )
             session.add(scrape_log)
@@ -232,7 +232,7 @@ class ConditionProcessor:
                     status="error",
                     error=str(e),
                     started_at=started_at,
-                    finished_at=datetime.utcnow(),
+                    finished_at=datetime.now(timezone.utc),
                 )
                 session.add(scrape_log)
                 session.commit()
@@ -296,7 +296,7 @@ class ConditionProcessor:
             Dict with merged flow_rate, gauge_height, water_temp values.
         """
         current_priority = SOURCE_PRIORITY.get(current_source, 0)
-        cutoff = datetime.utcnow() - timedelta(hours=2)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=2)
 
         # Get recent conditions from higher-priority sources
         recent_higher = (

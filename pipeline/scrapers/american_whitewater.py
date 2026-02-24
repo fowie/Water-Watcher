@@ -17,7 +17,7 @@ Data extracted:
 
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 from bs4 import BeautifulSoup
@@ -455,7 +455,7 @@ class AmericanWhitewaterScraper(BaseScraper):
                     description=h.get("description"),
                     source="aw",
                     source_url=f"{AW_API_BASE}/River/detail/id/{aw_id}/",
-                    reported_at=datetime.utcnow(),
+                    reported_at=datetime.now(timezone.utc),
                     is_active=True,
                 )
                 session.add(hazard)
@@ -553,7 +553,7 @@ class AmericanWhitewaterScraper(BaseScraper):
                             "hazards": hazards,
                             "raw": reach_data.get("raw_detail"),
                         },
-                        scraped_at=datetime.utcnow(),
+                        scraped_at=datetime.now(timezone.utc),
                     )
                 )
 

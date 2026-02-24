@@ -11,7 +11,7 @@ Parameters scraped:
 """
 
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone
 
 from scrapers.base import BaseScraper, ScrapedItem
 from config.settings import settings
@@ -94,7 +94,7 @@ class USGSScraper(BaseScraper):
                             "water_temp": water_temp_f,
                             "raw": readings,
                         },
-                        scraped_at=datetime.utcnow(),
+                        scraped_at=datetime.now(timezone.utc),
                     )
                 )
 

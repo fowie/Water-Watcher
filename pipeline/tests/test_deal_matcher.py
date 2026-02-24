@@ -285,3 +285,232 @@ class TestDealMatcherMatch:
     def test_notification_threshold_value(self):
         """Notification threshold should be 50."""
         assert NOTIFICATION_THRESHOLD == 50
+
+
+# ─── Edge case tests: unicode, long text, price $0, boundary scores ───
+
+
+class TestScoreMatchEdgeCases:
+    """Edge case tests for DealMatcher._score_match()."""
+
+    def setup_method(self):
+        self.matcher = DealMatcher()
+
+    # ── Unicode in titles and descriptions ──────────────────
+
+    def test_unicode_title_with_accented_chars(self):
+        """Deals with accented characters in title should match keywords."""
+        deal = make_mock_deal(
+            title="Balsa inflable para el Río Grande — usada",
+            description="Inflatable raft for river use",
+        )
+        f = make_mock_filter(
+            keywords=["inflatable", "raft"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0
+
+    def test_unicode_title_with_cjk_characters(self):
+        """CJK characters in title shouldn't crash scoring."""
+        deal = make_mock_deal(
+            title="カヤック — used kayak for sale",
+            description="Great condition",
+        )
+        f = make_mock_filter(
+            keywords=["kayak"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0
+
+    def test_unicode_keyword_matching(self):
+        """Unicode keyword in filter should match unicode text in deal."""
+        deal = make_mock_deal(
+            title="Río Grande paddle trip gear", description=""
+        )
+        f = make_mock_filter(
+            keywords=["río"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0
+
+    def test_emoji_in_title_does_not_crash(self):
+        """Emoji in title shouldn't crash the matcher."""
+        deal = make_mock_deal(
+            title="🚣 Raft for sale 🔥 great deal!!!",
+            description="Barely used",
+        )
+        f = make_mock_filter(
+            keywords=["raft"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0
+
+    def test_mixed_scripts_in_description(self):
+        """Mixed Unicode scripts in description shouldn't break matching."""
+        deal = make_mock_deal(
+            title="Raft sale",
+            description="Надувная лодка (inflatable boat) — used 5 times, très bien!",
+        )
+        f = make_mock_filter(
+            keywords=["inflatable"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0
+
+    # ── Extremely long descriptions ─────────────────────────
+
+    def test_extremely_long_description(self):
+        """Very long descriptions should be handled without errors."""
+        long_desc = "This is a great raft. " * 5000  # ~110K chars
+        deal = make_mock_deal(
+            title="Raft for sale",
+            description=long_desc,
+        )
+        f = make_mock_filter(
+            keywords=["raft"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0
+
+    def test_description_with_only_whitespace(self):
+        """Whitespace-only description should behave like empty."""
+        deal = make_mock_deal(
+            title="Kayak for sale",
+            description="   \n\t  \n  ",
+        )
+        f = make_mock_filter(
+            keywords=["kayak"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0
+
+    def test_description_with_special_regex_chars(self):
+        """Description with regex metacharacters shouldn't crash."""
+        deal = make_mock_deal(
+            title="Raft $500 (OBO)",
+            description="Price: $500. Call (555) 123-4567. [PENDING]",
+        )
+        f = make_mock_filter(
+            keywords=["raft"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0
+
+    # ── Price of $0 (free items) ────────────────────────────
+
+    def test_price_zero_gets_listed_price_bonus(self):
+        """$0 deal should get 'has a price' partial credit (10 pts)."""
+        deal = make_mock_deal(
+            price=0.0, title="Free raft giveaway", category="raft"
+        )
+        f = make_mock_filter(
+            keywords=["raft"], categories=["raft"], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        # Should get: category(30) + keyword(10) + no-regions(5) + has-price(10) = 55
+        assert score >= 45
+
+    def test_price_zero_not_disqualified_by_any_max_price(self):
+        """$0 should never be disqualified regardless of max_price."""
+        deal = make_mock_deal(
+            price=0.0, title="Free kayak", category="kayak"
+        )
+        f = make_mock_filter(
+            keywords=["kayak"], categories=["kayak"], max_price=1.0, regions=[]
+        )
+        score = self.matcher._score_match(deal, f)
+        # price is 0.0 (falsy), so `deal.price and deal.price > f.max_price` is False
+        assert score > 0
+
+    def test_price_zero_vs_price_none_scoring_difference(self):
+        """$0 (has a listed price) should score differently than None (no price)."""
+        deal_zero = make_mock_deal(
+            price=0.0, title="Free paddle", category="paddle"
+        )
+        deal_none = make_mock_deal(
+            price=None, title="Free paddle", category="paddle"
+        )
+        f = make_mock_filter(
+            keywords=["paddle"], categories=["paddle"], regions=[], max_price=None
+        )
+        score_zero = self.matcher._score_match(deal_zero, f)
+        score_none = self.matcher._score_match(deal_none, f)
+        # $0 gets "has a price" bonus (10), None does not
+        assert score_zero >= score_none
+
+    # ── Boundary and degenerate scoring ─────────────────────
+
+    def test_all_disqualifiers_hit_returns_zero(self):
+        """Deal that hits price AND region disqualifier returns 0."""
+        deal = make_mock_deal(
+            price=5000.0, title="Expensive raft", region="denver"
+        )
+        f = make_mock_filter(
+            max_price=1000.0, regions=["seattle"], keywords=["raft"]
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score == 0
+
+    def test_minimum_viable_match(self):
+        """A barely-matching deal should score above 0 but below threshold."""
+        deal = make_mock_deal(
+            title="Old inflatable thing",
+            category="other",
+            region=None,
+            price=None,
+            description="",
+        )
+        f = make_mock_filter(
+            keywords=["inflatable"],
+            categories=["raft"],
+            regions=[],
+            max_price=None,
+        )
+        score = self.matcher._score_match(deal, f)
+        # Gets: keyword(10) + no-regions(5) = 15
+        assert 0 < score < NOTIFICATION_THRESHOLD
+
+    def test_score_never_negative(self):
+        """Score should never go below 0, even with all mismatches."""
+        deal = make_mock_deal(
+            title="Mountain bike for sale",
+            description="21 speed",
+            category="bike",
+            region="denver",
+            price=9999.0,
+        )
+        f = make_mock_filter(
+            keywords=["raft"], categories=["raft"], max_price=100.0, regions=["seattle"]
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score >= 0
+
+    def test_deal_with_empty_title_and_description(self):
+        """Empty title and description should not crash."""
+        deal = make_mock_deal(title="", description="")
+        f = make_mock_filter(
+            keywords=["raft"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        # "raft" not found in empty text → disqualified by keyword rule
+        assert score == 0
+
+    def test_deal_with_empty_title_keyword_in_description(self):
+        """Keyword present only in description should still match."""
+        deal = make_mock_deal(title="", description="Great raft, barely used")
+        f = make_mock_filter(
+            keywords=["raft"], categories=[], regions=[], max_price=None
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0
+
+    def test_very_small_fractional_price(self):
+        """Fractional prices like $0.01 should work correctly."""
+        deal = make_mock_deal(
+            price=0.01, title="Cheap paddle", category="paddle"
+        )
+        f = make_mock_filter(
+            keywords=["paddle"], categories=["paddle"], max_price=100.0, regions=[]
+        )
+        score = self.matcher._score_match(deal, f)
+        assert score > 0

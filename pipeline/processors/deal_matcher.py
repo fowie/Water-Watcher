@@ -16,7 +16,7 @@ Matches scoring 50+ are considered "strong" and trigger notifications.
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from models import SessionLocal, GearDeal, DealFilter, DealFilterMatch, ScrapeLog
 from scrapers.base import ScrapedItem
@@ -53,7 +53,7 @@ class DealMatcher:
         """
         session = SessionLocal()
         new_matches = []
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         deals_saved = 0
 
         try:
@@ -136,8 +136,8 @@ class DealMatcher:
                 status="success",
                 item_count=deals_saved,
                 started_at=started_at,
-                finished_at=datetime.utcnow(),
-                duration=int((datetime.utcnow() - started_at).total_seconds() * 1000),
+                finished_at=datetime.now(timezone.utc),
+                duration=int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000),
             )
             session.add(scrape_log)
             session.commit()

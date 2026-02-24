@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navigation } from "@/components/navigation";
+import { Toaster } from "@/components/toaster";
 
 export const metadata: Metadata = {
   title: "Water-Watcher — Whitewater Rafting Tracker",
@@ -21,6 +22,7 @@ export default function RootLayout({
         <div className="md:pl-64 pt-14 md:pt-0 pb-20 md:pb-0 min-h-screen">
           {children}
         </div>
+        <Toaster />
       </body>
     </html>
   );

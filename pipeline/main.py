@@ -28,6 +28,26 @@ from notifiers.push_notifier import PushNotifier
 # Load environment variables from project root
 load_dotenv(dotenv_path="../.env")
 
+
+def _validate_startup():
+    """Check critical configuration before starting the pipeline."""
+    import os
+
+    db_url = os.getenv("DATABASE_URL", "")
+    if not db_url:
+        logging.critical(
+            "DATABASE_URL is not set. The pipeline cannot connect to the database. "
+            "Set DATABASE_URL in your .env file or environment."
+        )
+        sys.exit(1)
+
+    if not os.getenv("NEXT_PUBLIC_VAPID_PUBLIC_KEY") or not os.getenv("VAPID_PRIVATE_KEY"):
+        logging.warning(
+            "VAPID keys are not configured. Push notifications will be disabled. "
+            "Set NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY to enable them."
+        )
+
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
@@ -103,6 +123,8 @@ def run_raft_watch():
 
 
 def main():
+    _validate_startup()
+
     logger.info("=" * 60)
     logger.info("Water-Watcher Pipeline starting")
     logger.info(f"Time: {datetime.now().isoformat()}")

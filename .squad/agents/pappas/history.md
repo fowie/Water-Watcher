@@ -20,6 +20,15 @@
 - Next.js API routes may call `prisma.user.findUnique` for user verification before schema validation. Mock the full Prisma model surface area, not just the primary model.
 - Route response shapes matter: GET /api/rivers returns `{ rivers, total, limit, offset }`, not a bare array.
 
+**2026-02-24:** Edge case test expansion round. Discoveries:
+- Deals route clamps limit to [1,100] and offset to [0,∞) — safe. Rivers route does NOT clamp limit minimum or negative offset — fragile.
+- `maxPrice` ignores non-positive values (`price > 0` guard) — correct behavior, but negative/zero maxPrice silently drops the filter.
+- `deal_matcher._score_match()` treats `price=0.0` as falsy in Python, so $0 deals skip the price-ceiling disqualifier AND the 20pt price bonus. They get only 10pts for "has a listed price". This is a subtle edge case worth documenting.
+- Unicode, CJK, emoji all work fine in both Prisma search and Python `str.lower()` keyword matching — no crashes.
+- Very long descriptions (~110KB) process without issue in the deal matcher.
+- Test count after this round: web 119 (was 98), pipeline 147 (was 130).
+- Weakest coverage areas: Craigslist scraper (no test file), AW scraper (no test file), notification delivery (push_notifier.py untested), condition_processor integration paths, web component rendering.
+
 ---
 
 ## Cross-Agent Updates

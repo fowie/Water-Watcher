@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { RiverCard } from "@/components/river-card";
 import { AddRiverDialog } from "@/components/add-river-dialog";
+import { EmptyState } from "@/components/empty-state";
 import { getRivers } from "@/lib/api";
-import { Search, Mountain, Loader2 } from "lucide-react";
+import { Search, Mountain } from "lucide-react";
 import type { RiverSummary } from "@/types";
 
 export default function RiversPage() {
@@ -61,9 +63,7 @@ export default function RiversPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin-slow text-[var(--muted-foreground)]" />
-        </div>
+        <RiversSkeleton />
       ) : error ? (
         <div className="text-center py-20 space-y-3">
           <p className="text-[var(--destructive)] font-medium">{error}</p>
@@ -75,7 +75,15 @@ export default function RiversPage() {
           </button>
         </div>
       ) : rivers.length === 0 ? (
-        <EmptyState hasSearch={!!search} />
+        <EmptyState
+          icon={Mountain}
+          title={search ? "No rivers found" : "No rivers tracked yet"}
+          description={
+            search
+              ? "Try adjusting your search terms or add a new river."
+              : "Add your first river to start monitoring conditions, hazards, and more."
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {rivers.map((river) => (
@@ -87,30 +95,23 @@ export default function RiversPage() {
   );
 }
 
-function EmptyState({ hasSearch }: { hasSearch: boolean }) {
+function RiversSkeleton() {
   return (
-    <div className="text-center py-20 space-y-4">
-      <div className="flex justify-center">
-        <div className="rounded-full bg-[var(--muted)] p-4">
-          <Mountain className="h-10 w-10 text-[var(--muted-foreground)]" />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="rounded-[var(--radius)] border border-[var(--border)] p-4 space-y-3"
+        >
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+          <div className="flex gap-2 pt-2">
+            <Skeleton className="h-6 w-16 rounded-full" />
+            <Skeleton className="h-6 w-20 rounded-full" />
+          </div>
+          <Skeleton className="h-4 w-1/3 mt-2" />
         </div>
-      </div>
-      {hasSearch ? (
-        <>
-          <h2 className="text-lg font-semibold">No rivers found</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Try adjusting your search terms or add a new river.
-          </p>
-        </>
-      ) : (
-        <>
-          <h2 className="text-lg font-semibold">No rivers tracked yet</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Add your first river to start monitoring conditions, hazards, and
-            more.
-          </p>
-        </>
-      )}
+      ))}
     </div>
   );
 }

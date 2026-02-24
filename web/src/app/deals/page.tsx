@@ -11,11 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DealCard } from "@/components/deal-card";
 import { CreateFilterDialog } from "@/components/create-filter-dialog";
 import { getDeals, getDealFilters } from "@/lib/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/empty-state";
 import {
   ShoppingBag,
   Search,
   SlidersHorizontal,
-  Loader2,
   X,
   Filter,
   ChevronDown,
@@ -249,9 +250,7 @@ export default function DealsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-[var(--muted-foreground)]" />
-        </div>
+        <DealsSkeleton />
       ) : error ? (
         <div className="text-center py-20 space-y-3">
           <p className="text-[var(--destructive)] font-medium">{error}</p>
@@ -263,7 +262,15 @@ export default function DealsPage() {
           </button>
         </div>
       ) : deals.length === 0 ? (
-        <EmptyDeals hasFilters={hasActiveFilters} />
+        <EmptyState
+          icon={ShoppingBag}
+          title={hasActiveFilters ? "No deals match your filters" : "No deals yet"}
+          description={
+            hasActiveFilters
+              ? "Try broadening your search or create a deal alert to get notified of new matches."
+              : "The scraping pipeline will populate gear deals from Craigslist automatically. Create a deal alert to get notified when deals appear."
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {deals.map((deal) => (
@@ -275,31 +282,25 @@ export default function DealsPage() {
   );
 }
 
-function EmptyDeals({ hasFilters }: { hasFilters: boolean }) {
+function DealsSkeleton() {
   return (
-    <div className="text-center py-20 space-y-4">
-      <div className="flex justify-center">
-        <div className="rounded-full bg-[var(--muted)] p-4">
-          <ShoppingBag className="h-10 w-10 text-[var(--muted-foreground)]" />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div
+          key={i}
+          className="rounded-[var(--radius)] border border-[var(--border)] overflow-hidden"
+        >
+          <Skeleton className="h-40 w-full rounded-none" />
+          <div className="p-4 space-y-3">
+            <Skeleton className="h-5 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <div className="flex gap-2">
+              <Skeleton className="h-6 w-14 rounded-full" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+          </div>
         </div>
-      </div>
-      {hasFilters ? (
-        <>
-          <h2 className="text-lg font-semibold">No deals match your filters</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Try broadening your search or create a deal alert to get notified of
-            new matches.
-          </p>
-        </>
-      ) : (
-        <>
-          <h2 className="text-lg font-semibold">No deals yet</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            The scraping pipeline will populate gear deals from Craigslist
-            automatically. Create a deal alert to get notified when deals appear.
-          </p>
-        </>
-      )}
+      ))}
     </div>
   );
 }
