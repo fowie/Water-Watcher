@@ -130,7 +130,7 @@ Added 131 tests across Craigslist scraper (57), AW scraper (35), and Push notifi
 
 ---
 
-## BD-004: SQLAlchemy Models Must Mirror Prisma
+## BD-007: SQLAlchemy Models Must Mirror Prisma
 **Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
 
 Added User/UserRiver to SQLAlchemy. Prisma is canonical schema. Python models mirror it.
@@ -179,14 +179,14 @@ Python: `pipeline/tests/` with conftest.py. TypeScript: `web/src/__tests__/` mir
 
 ---
 
-## BD-004: datetime.utcnow() Deprecation Fix
+## BD-008: datetime.utcnow() Deprecation Fix
 **Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
 
 Replaced all `datetime.utcnow()` calls with `datetime.now(timezone.utc)` across the entire pipeline (8 files, ~30 occurrences). This eliminates the Python 3.12+ deprecation warning and produces timezone-aware UTC datetimes. A `_utc_now()` helper is used for SQLAlchemy column defaults and dataclass `default_factory`. Also added `_validate_startup()` to `main.py` for missing `DATABASE_URL` / VAPID key warnings.
 
 ---
 
-## FE-005: Shared EmptyState + Skeleton + Toast Components
+## FE-006: Shared EmptyState + Skeleton + Toast Components
 **Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
 
 EmptyState: reusable component with `icon`, `title`, `description`, `children` props. Skeleton: CSS `animate-pulse` primitive; loading states render card-shaped skeleton grids. Toast: Radix Toast + `useToast` hook with module-level state/listener pattern; three variants (default, destructive, success), wired into root layout. Mobile nav active-route detection confirmed correct.
@@ -197,3 +197,14 @@ EmptyState: reusable component with `icon`, `title`, `description`, `children` p
 **Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
 
 Added 38 new edge case tests (21 web, 17 pipeline; totals: 119 web, 147 pipeline). Findings: rivers API lacks input clamping (recommend aligning with deals route pattern); `$0` price is falsy in `deal_matcher._score_match()` (safe but under-scores free items); no test coverage for `craigslist.py`, `american_whitewater.py`, `push_notifier.py`, or component rendering. Next priorities: Craigslist scraper tests, push notifier tests, rivers route validation hardening.
+---
+
+## BD-009: Hazard Classifier & RSS Parser Bug Fixes
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Fixes for two bugs reported by Pappas (QA-001):
+
+1. **Hazard classifier keyword ordering** — Moved logjam check before strainer check in `_classify_hazard`. Removed ambiguous "log" keyword from strainer list. More specific keywords must precede broader ones to avoid substring false matches.
+2. **RSS parser ElementTree truthiness** — Replaced `or`-based element lookups with explicit `is None` checks in Craigslist `_scrape_rss`. ElementTree elements with no children are falsy in Python, breaking truthiness-based patterns.
+
+All 278 pipeline tests pass after both fixes.

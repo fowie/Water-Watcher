@@ -31,3 +31,18 @@
 - BD-004: Explicit None checks for numeric fields (Utah)
 - FE-005: River detail UX enhancements (Tyler)
 - QA-001: Untested module coverage & bug discoveries (Pappas)
+---
+
+## Round 2 Follow-Up
+
+### Utah (Backend) — Bug Fixes
+- **Hazard classifier ordering:** Moved logjam keyword check before strainer check in `_classify_hazard`. Removed ambiguous "log" from strainer keywords. Fixes misclassification where "logjam" was caught by the "log" substring match in the strainer branch.
+- **RSS parser ElementTree truthiness:** Replaced `or`-based element lookups (`item.find("title") or item.find("{ns}title")`) with explicit `is None` checks in Craigslist `_scrape_rss`. ElementTree elements with no children evaluate as falsy in Python 3.12+.
+- All 278 pipeline tests pass after both fixes.
+
+### Decisions Merged (Follow-Up)
+- BD-009: Hazard classifier & RSS parser bug fixes (Utah)
+
+### Deduplication
+- Renumbered duplicate BD-004 entries → BD-007 (SQLAlchemy Models), BD-008 (datetime.utcnow)
+- Renumbered duplicate FE-005 → FE-006 (EmptyState/Skeleton/Toast)
