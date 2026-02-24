@@ -494,9 +494,8 @@ class TestClassifyRunnabilityEdges:
         assert classify_runnability(200.0) == "low"
 
     def test_infinity_flow(self):
-        """Infinite flow doesn't match any default range (inf < inf is False)."""
-        # DEFAULT_FLOW_RANGES dangerous is (10000, inf) → 10000 <= inf but inf < inf is False
-        assert classify_runnability(float("inf")) is None
+        """Infinite flow is classified as dangerous (boundary-inclusive)."""
+        assert classify_runnability(float("inf")) == "dangerous"
 
     def test_very_small_positive(self):
         assert classify_runnability(0.001) == "too_low"

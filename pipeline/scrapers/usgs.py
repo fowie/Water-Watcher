@@ -11,6 +11,7 @@ Parameters scraped:
 """
 
 import httpx
+import json
 from datetime import datetime, timezone
 
 from scrapers.base import BaseScraper, ScrapedItem
@@ -72,7 +73,14 @@ class USGSScraper(BaseScraper):
                     latest = values[-1]
                     if site_code not in site_data:
                         site_data[site_code] = {"site_code": site_code}
-                    site_data[site_code][param_code] = float(latest["value"])
+                    try:
+                        site_data[site_code][param_code] = float(latest["value"])
+                    except (ValueError, TypeError):
+                        self.logger.warning(
+                            f"Non-numeric value '{latest.get('value')}' for "
+                            f"param {param_code} at site {site_code}, skipping"
+                        )
+                        continue
                     site_data[site_code]["datetime"] = latest["dateTime"]
 
             for site_code, readings in site_data.items():
@@ -100,6 +108,8 @@ class USGSScraper(BaseScraper):
 
         except httpx.HTTPError as e:
             self.log_error(e)
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            self.logger.error(f"Failed to parse USGS response: {e}")
 
         self.log_complete(len(items))
         return items

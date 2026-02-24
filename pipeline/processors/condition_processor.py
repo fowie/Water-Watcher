@@ -81,7 +81,11 @@ def classify_runnability(
 
     # Fall back to generic thresholds
     for label, (low, high) in DEFAULT_FLOW_RANGES.items():
-        if low <= flow_rate < high:
+        if label == "dangerous":
+            # Use <= for the upper bound (inf) so inf itself is classified
+            if low <= flow_rate <= high:
+                return label
+        elif low <= flow_rate < high:
             return label
     return None
 
@@ -264,6 +268,13 @@ class ConditionProcessor:
             return (
                 session.query(River)
                 .filter(River.aw_id == data["aw_id"])
+                .first()
+            )
+        # Fallback: try name-based lookup for blm, usfs, facebook, and other sources
+        if "river_name" in data:
+            return (
+                session.query(River)
+                .filter(River.name.ilike(f"%{data['river_name']}%"))
                 .first()
             )
         return None

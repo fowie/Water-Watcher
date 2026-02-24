@@ -109,7 +109,7 @@ class TestMalformedResponses:
     @respx.mock
     @patch("scrapers.usgs.SessionLocal")
     def test_timeseries_missing_source_info(self, mock_session_cls):
-        """TimeSeries entry without sourceInfo raises KeyError (unhandled)."""
+        """TimeSeries entry without sourceInfo is handled gracefully."""
         _setup_scraper_mock(mock_session_cls, ["09380000"])
         ts = {
             "variable": {"variableCode": [{"value": "00060"}]},
@@ -118,36 +118,36 @@ class TestMalformedResponses:
         respx.get(f"{settings.usgs_base_url}/iv/").mock(
             return_value=httpx.Response(200, json=_make_usgs_response(ts))
         )
-        # Scraper only catches httpx.HTTPError, so KeyError propagates
-        with pytest.raises(KeyError):
-            self.scraper.scrape()
+        # Scraper now catches KeyError gracefully
+        result = self.scraper.scrape()
+        assert result == []
 
     @respx.mock
     @patch("scrapers.usgs.SessionLocal")
     def test_non_numeric_value(self, mock_session_cls):
-        """Non-numeric flow value (e.g., 'Ice') raises ValueError in float()."""
+        """Non-numeric flow value (e.g., 'Ice') is skipped gracefully."""
         _setup_scraper_mock(mock_session_cls, ["09380000"])
         ts = _make_timeseries_entry("09380000", "00060",
                                      [{"value": "Ice", "dateTime": "2026-01-01T00:00:00"}])
         respx.get(f"{settings.usgs_base_url}/iv/").mock(
             return_value=httpx.Response(200, json=_make_usgs_response(ts))
         )
-        # Scraper only catches httpx.HTTPError, so ValueError propagates
-        with pytest.raises(ValueError):
-            self.scraper.scrape()
+        # Scraper now catches ValueError and skips non-numeric values
+        result = self.scraper.scrape()
+        assert isinstance(result, list)
 
     @respx.mock
     @patch("scrapers.usgs.SessionLocal")
     def test_html_response_instead_of_json(self, mock_session_cls):
-        """HTML response (maintenance page) raises JSONDecodeError."""
+        """HTML response (maintenance page) is handled gracefully."""
         _setup_scraper_mock(mock_session_cls, ["09380000"])
         respx.get(f"{settings.usgs_base_url}/iv/").mock(
             return_value=httpx.Response(200, text="<html>Under Maintenance</html>",
                                          headers={"content-type": "text/html"})
         )
-        # response.json() raises JSONDecodeError, not caught by httpx.HTTPError
-        with pytest.raises(Exception):
-            self.scraper.scrape()
+        # Scraper now catches JSONDecodeError gracefully
+        result = self.scraper.scrape()
+        assert result == []
 
 
 # ─── HTTP Error Handling ────────────────────────────────────
