@@ -336,12 +336,11 @@ class TestClassifyHazard:
         assert self.scraper._classify_hazard("Low-head weir", "") == "dam"
 
     def test_logjam_keywords(self):
-        # Note: "logjam" as one word contains "log" which matches strainer first.
-        # The classify function checks strainer keywords before logjam keywords.
-        # "log jam" (two words) also matches "log" → strainer first.
-        # This documents the actual priority ordering in the code.
-        assert self.scraper._classify_hazard("Logjam at bridge", "") == "strainer"  # "log" in "logjam" matches strainer first
-        assert self.scraper._classify_hazard("Complete blockage", "full blockage ahead") == "logjam"  # "blockage" matches logjam
+        # Logjam check runs before strainer to avoid false matches
+        # ("logjam" contains "log" which would match strainer if checked first).
+        assert self.scraper._classify_hazard("Logjam at bridge", "") == "logjam"
+        assert self.scraper._classify_hazard("Log jam downstream", "") == "logjam"
+        assert self.scraper._classify_hazard("Complete blockage", "full blockage ahead") == "logjam"
 
     def test_closure_keywords(self):
         assert self.scraper._classify_hazard("River closure", "closed for season") == "closure"

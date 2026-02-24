@@ -335,12 +335,12 @@ class AmericanWhitewaterScraper(BaseScraper):
     def _classify_hazard(self, title: str, description: str) -> str:
         """Classify a hazard into a type based on its text content."""
         text = f"{title} {description}".lower()
-        if any(w in text for w in ("strainer", "tree", "log", "wood", "debris")):
+        if any(w in text for w in ("logjam", "log jam", "blockage")):
+            return "logjam"
+        if any(w in text for w in ("strainer", "tree", "wood", "debris")):
             return "strainer"
         if any(w in text for w in ("dam", "diversion", "weir")):
             return "dam"
-        if any(w in text for w in ("logjam", "log jam", "blockage")):
-            return "logjam"
         if any(w in text for w in ("closure", "closed", "permit")):
             return "closure"
         if any(w in text for w in ("rapid", "hole", "hydraulic", "undercut")):

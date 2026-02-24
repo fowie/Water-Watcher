@@ -211,10 +211,18 @@ class CraigslistScraper(BaseScraper):
                 items = root.findall(".//{http://purl.org/rss/1.0/}item")
 
             for item in items:
-                title_el = item.find("title") or item.find("{http://purl.org/rss/1.0/}title")
-                link_el = item.find("link") or item.find("{http://purl.org/rss/1.0/}link")
-                desc_el = item.find("description") or item.find("{http://purl.org/rss/1.0/}description")
-                date_el = item.find("dc:date", {"dc": "http://purl.org/dc/elements/1.1/"}) or item.find("pubDate")
+                title_el = item.find("title")
+                if title_el is None:
+                    title_el = item.find("{http://purl.org/rss/1.0/}title")
+                link_el = item.find("link")
+                if link_el is None:
+                    link_el = item.find("{http://purl.org/rss/1.0/}link")
+                desc_el = item.find("description")
+                if desc_el is None:
+                    desc_el = item.find("{http://purl.org/rss/1.0/}description")
+                date_el = item.find("dc:date", {"dc": "http://purl.org/dc/elements/1.1/"})
+                if date_el is None:
+                    date_el = item.find("pubDate")
 
                 title = title_el.text if title_el is not None and title_el.text else ""
                 link = link_el.text if link_el is not None and link_el.text else ""
