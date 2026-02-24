@@ -60,3 +60,9 @@
 **2026-02-24 (from Tyler):** Frontend component structure: `web/src/components/ui/` (10 primitives), `web/src/components/` (8 domain components). Pages use client-side fetching via `web/src/lib/api.ts`. Types in `web/src/types/index.ts`. Zod validations in `web/src/lib/validations.ts`.
 
 **2026-02-24 (from Utah):** Pipeline modules finalized: `condition_processor.py` (331 lines, 6 flow ranges, source priority merging), `deal_matcher.py` (227 lines, scored matching 0-100). AW scraper ~400 lines, CL scraper ~370 lines. API routes enhanced with pagination, search, user validation. Schedule: conditions every 4h, deals every 30m.
+
+**2026-02-24 (Round 4 cross-agent — from Utah):** Created `api-errors.ts` utility, `GET /api/health` endpoint, `PATCH /api/rivers/[id]`, `PATCH /api/deals/filters/[id]` with ownership validation. Added validation schemas and API client functions.
+
+**2026-02-24 (Round 4 cross-agent — from Tyler):** Built `/settings` page, `EditRiverDialog`, `MapLink` component, and comprehensive accessibility pass. Build clean.
+
+**2026-02-24 (Round 4 cross-agent — from Coordinator):** Fixed `timeAgo` bugs — added "weeks ago" bucket for 7-27 days, graceful fallback for invalid date inputs.

@@ -39,3 +39,11 @@
 **2026-02-24 (from Utah):** Full pipeline implemented — AW scraper (JSON + HTML), Craigslist (RSS + fallback), condition processor with source priority merging, scored deal matcher (50+ threshold), push notifier with pywebpush. All 5 API routes enhanced with pagination, search, validation, error handling. SQLAlchemy models mirroring Prisma schema.
 
 **2026-02-24 (from Pappas):** 228 tests total (130 Python + 98 TypeScript), all passing. Full coverage of scrapers, processors, deal matcher, models, validations, and API routes.
+
+**2026-02-24 (Round 4 cross-agent — from Utah):** Created api-errors utility, health endpoint, PATCH APIs for rivers and deal filters. 168 web tests.
+
+**2026-02-24 (Round 4 cross-agent — from Tyler):** Built settings page, edit river dialog, MapLink component, comprehensive accessibility pass. Build clean.
+
+**2026-02-24 (Round 4 cross-agent — from Pappas):** 51 new web tests (199 total). 477 total tests (199 web + 278 pipeline).
+
+**2026-02-24 (Round 4 cross-agent — from Coordinator):** Fixed timeAgo bugs — added weeks bucket, graceful invalid input handling.

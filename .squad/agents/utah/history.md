@@ -130,3 +130,9 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 - 168 vitest tests passing (up from 135), build clean
 - New test files: `health.test.ts` (3 tests), `deals-filters-id.test.ts` (11 tests)
 - Added 6 PATCH tests to `rivers.test.ts` (valid update, 404, bad latitude, empty name, nullable fields, DB error)
+
+**2026-02-24 (Round 4 cross-agent — from Tyler):** Built `/settings` page (notification preferences, data management, about), `EditRiverDialog` (pre-fills + PATCH), reusable `MapLink` component, and comprehensive accessibility pass (skip-to-content, aria-labels, aria-expanded, role attributes, page titles, keyboard focus, sr-only labels). Build clean.
+
+**2026-02-24 (Round 4 cross-agent — from Pappas):** Added 51 new web tests (148 → 199) covering api-errors helpers, health endpoint edge cases, PATCH rivers, and PATCH deal filters. Seed script type-checks cleanly. Total: 477 tests (199 web + 278 pipeline).
+
+**2026-02-24 (Round 4 cross-agent — from Coordinator):** Fixed `timeAgo` bugs — added "weeks ago" bucket for 7-27 days, graceful fallback for invalid date inputs.

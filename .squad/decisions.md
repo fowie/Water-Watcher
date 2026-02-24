@@ -197,6 +197,90 @@ EmptyState: reusable component with `icon`, `title`, `description`, `children` p
 **Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
 
 Added 38 new edge case tests (21 web, 17 pipeline; totals: 119 web, 147 pipeline). Findings: rivers API lacks input clamping (recommend aligning with deals route pattern); `$0` price is falsy in `deal_matcher._score_match()` (safe but under-scores free items); no test coverage for `craigslist.py`, `american_whitewater.py`, `push_notifier.py`, or component rendering. Next priorities: Craigslist scraper tests, push notifier tests, rivers route validation hardening.
+
+---
+
+## BD-009: Database Seed Script Strategy
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Seed script at `web/prisma/seed.ts` uses `upsert` for entities with stable unique keys (user by id, rivers by awId, deals by url, filter by id). For child entities without unique constraints (conditions, hazards, campsites, rapids), uses `deleteMany` + `createMany` to stay idempotent. This avoids duplicates on repeat runs while keeping the script simple. Demo user ID is `"demo-user"` to match FE-004.
+
+---
+
+## BD-010: Service Worker — Notifications Only
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Service worker at `web/public/sw.js` handles only push notifications (push event, notificationclick, activate/claim). No caching or offline strategy — Next.js handles asset caching, and adding a cache layer would conflict with Next.js's own service worker behavior. Notification payloads are JSON with `{ title, body, url, tag }`.
+
+---
+
+## BD-011: River DELETE Endpoint
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Added `DELETE /api/rivers/:id` returning 204 on success, 404 if not found. Cascade deletion handled by Prisma schema (`onDelete: Cascade` on all river child relations). No auth check yet — will need one when user management is implemented (aligns with FE-004 temporary demo user approach).
+
+---
+
+## FE-007: Dashboard Homepage, River Delete, Dark Mode Toggle
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+**Dashboard Homepage** — Replaced static hero/marketing page with a functional dashboard. Quick stats row (rivers tracked, active hazards, gear deals, active filters), recent conditions (last 5 rivers), latest deals (3 most recent). Client component with `useEffect` + `Promise.allSettled`. Loading skeletons and empty states included.
+
+**River Card Delete** — Trash2 icon button on hover in top-right of `river-card.tsx`. `window.confirm()` before calling `DELETE /api/rivers/{id}`. `onDelete` callback triggers parent refresh.
+
+**API Fix: getRivers** — Fixed `getRivers` in `api.ts` to handle paginated response `{ rivers, total, limit, offset }`. Added `RiversResponse` interface and `deleteRiver` function.
+
+**Dark Mode Toggle** — `theme-toggle.tsx` toggles `dark` class on `<html>`, persists in localStorage, respects system `prefers-color-scheme`. Added to both desktop sidebar and mobile header in `navigation.tsx`. CSS `html.dark` block in `globals.css`.
+
+---
+
+## TST-002: Round 3 Test Expansion — timeAgo & Deal Filters
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+Added 29 web tests (119 → 148): 25 `timeAgo` tests covering just-now, minutes, hours, days, months, years, invalid inputs, and future dates; 4 deal filter edge cases (non-existent user 404, special ASCII keywords, unicode/emoji keywords).
+
+**Discoveries:** `timeAgo` lacks a "weeks ago" bucket — 7-29 days all display as "X days ago". Invalid date strings produce "NaN years ago" with no graceful fallback. Both flagged for fix.
+
+---
+
+## BD-012: API Error Helper Pattern
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Created `web/src/lib/api-errors.ts` with two helpers: `apiError(status, message)` for standardized JSON error responses, and `handleApiError(error)` for safe 500 handling that logs internally but never leaks stack traces. All API routes should use these instead of inline error construction. Refactored rivers and deal filter routes as examples.
+
+---
+
+## BD-013: PATCH Endpoints with Ownership Validation
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+PATCH endpoints use dedicated `*UpdateSchema` (Zod `.optional()` on each field) rather than `.partial()` on create schema, to support nullable fields. Deal filter PATCH requires `userId` in request body and checks against filter owner (403 on mismatch). Rivers PATCH does not require ownership (no auth yet).
+
+---
+
+## BD-014: Health Check Endpoint
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+GET `/api/health` returns `{ status, timestamp, version }`. Uses `prisma.$queryRaw` with `SELECT 1` to probe DB connectivity. Returns 200/ok or 503/degraded. Version hardcoded at `"0.1.0"`.
+
+---
+
+## FE-008: Settings Page, Edit River Dialog, MapLink & Accessibility
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+**Settings Page** (`/settings`) — Three sections: Notification Preferences (toggle switches per deal filter), Data Management (DB connection check + clear cache), About (version badge, GitHub link). Added to navigation sidebar and mobile tab bar.
+
+**Edit River Dialog** — Pre-fills form with current river data, validates with `riverUpdateSchema`, calls `PATCH /api/rivers/[id]`, refreshes on success.
+
+**MapLink Component** — Reusable component replacing inline Google Maps links. Props: `latitude`, `longitude`, `label`, `showLabel`.
+
+**Accessibility** — Skip-to-content link, `aria-label` on all icon-only buttons, `aria-hidden` on decorative icons, `aria-expanded` on mobile menu, `role` attributes, page-level `<title>` via template pattern, keyboard-focusable delete button, screen-reader-only labels on settings toggles.
+
+---
+
+## TST-003: Round 4 Test Coverage for New Features
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+Added 51 new web tests (148 → 199) covering: api-errors helpers (13 tests), health endpoint edge cases (6 new), PATCH rivers (6 new — full update, unknown field stripping, imageUrl validation), PATCH deal filters (7 new — schema enforcement, ownership, multi-field updates). Seed script type-checks cleanly. Dashboard component not feasible to test without `@testing-library/react` + `jsdom`. Final counts: 199 web, 278 pipeline, **477 total**.
 ---
 
 ## BD-009: Hazard Classifier & RSS Parser Bug Fixes

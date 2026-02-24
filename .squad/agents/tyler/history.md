@@ -156,3 +156,9 @@
 - **Page-level titles**: Root layout uses `title.template` pattern (`"%s | Water-Watcher"`). Route layouts for `/rivers`, `/deals`, `/settings` export metadata titles
 - **Keyboard focus**: Delete button on RiverCard now shows on `focus:opacity-100` (not just hover)
 - **`sr-only` labels**: Filter toggle switches on settings page have screen-reader-only labels
+
+**2026-02-24 (Round 4 cross-agent — from Utah):** Created `api-errors.ts` utility (apiError + handleApiError), `GET /api/health` endpoint (DB check, ok/degraded), `PATCH /api/rivers/[id]` (partial updates), `PATCH /api/deals/filters/[id]` (ownership-validated updates). 168 web tests passing.
+
+**2026-02-24 (Round 4 cross-agent — from Pappas):** Added 51 new web tests (148 → 199) covering api-errors, health, PATCH rivers, PATCH deal filters. Total: 477 tests. Dashboard component testing blocked on missing @testing-library/react.
+
+**2026-02-24 (Round 4 cross-agent — from Coordinator):** Fixed `timeAgo` bugs — added "weeks ago" bucket for 7-27 days, graceful fallback for invalid date inputs.
