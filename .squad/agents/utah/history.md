@@ -280,3 +280,9 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 ### Test Results
 - Pipeline: 566 passed, 43 skipped (unchanged)
 - Web: 345 passed (unchanged)
+
+**2026-02-24 (Round 8 cross-agent — from Tyler):** Added OAuth buttons (Google/GitHub) to sign-in and registration pages. Built `GlobalNotificationPreferences` section on Settings page with channel selector (Push/Email/Both) and per-type toggle switches. Alert history page at `/alerts` with filter tabs and pagination. `NotificationBell` component in nav with unread count badge and 60s polling. 21 routes, build clean.
+
+**2026-02-24 (Round 8 cross-agent — from Pappas):** 116 new tests: `test_email_notifier.py` (70), `notification-prefs.test.ts` (22), `alerts.test.ts` (24). Pipeline 636+43skip, Web 387, total 1023+43. Found `limit=0` falsy edge case in alerts route — fixed by Coordinator.
+
+**2026-02-24 (Round 8 cross-agent — from Coordinator):** Fixed alerts API `limit=0` edge case: `parseInt(param) || 20` treats 0 as falsy. Changed to `Number.isFinite(parsed) ? parsed : 20`.

@@ -452,3 +452,60 @@ BLM and USFS scrapers run on a separate 6-hour schedule (`run_land_agency_scrape
 - `test_usfs_scraper.py` (71 tests): API key gating, alert type/severity classification, river name extraction, facility/rec area alert parsing, HTTP mocked fetch, rate limiting, full integration.
 - `user-profile.test.ts` (22 tests): GET profile with counts, PATCH name/email, 409 duplicate email, validation errors, no passwordHash leak.
 - `user-rivers.test.ts` (23 tests): GET tracked rivers, POST add/duplicate/missing, DELETE remove/not-tracked, validation, auth enforcement.
+
+---
+
+## BD-020: Email Notifications via Resend + OAuth Providers
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Added `EmailNotifier` class in `pipeline/notifiers/email_notifier.py` using the Resend API. Runs alongside existing `PushNotifier` — email dispatch is gated by user's `NotificationPreference`:
+
+- **Channel check:** Only sends email if user's channel is `"email"` or `"both"`. Default for new users is `"push"` (no change to existing behavior).
+- **Per-type check:** Each alert type (deals, conditions, hazards, digest) can be independently toggled.
+- **Graceful degradation:** Missing `RESEND_API_KEY` = all email silently skipped. Email failures never break the scraping pipeline.
+
+New `NotificationPreference` model in both Prisma and SQLAlchemy:
+- `channel`: `"push"` | `"email"` | `"both"` (default: `"push"`)
+- `dealAlerts`, `conditionAlerts`, `hazardAlerts`: boolean, default true
+- `weeklyDigest`: boolean, default false
+
+New `AlertLog` model tracks every notification sent. **SQLAlchemy gotcha:** `metadata` is reserved by SQLAlchemy's Declarative API. Python attribute is `extra_data`, DB column is still `metadata`.
+
+OAuth: Added Google and GitHub providers to NextAuth with `allowDangerousEmailAccountLinking: true`. New env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_ID`, `GITHUB_SECRET`.
+
+New API routes: `GET/PATCH /api/user/notifications` (notification prefs), `GET /api/alerts` (paginated alert history with type filter).
+
+---
+
+## FE-011: OAuth Sign-In Buttons, Notification Preferences UI, Alert History
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+OAuth buttons (Google + GitHub) added to sign-in and registration pages. Visual "or" divider separates OAuth from credentials form.
+
+`GlobalNotificationPreferences` section on Settings page with channel selector (Push/Email/Both) and four toggle switches (Deal Alerts, Condition Alerts, Hazard Alerts, Weekly Digest). Save button with dirty-state tracking.
+
+Alert history page at `/alerts` (AuthGuard-protected): filter tabs (All/Deals/Conditions/Hazards), paginated card list with Load More, empty states.
+
+`NotificationBell` component in navigation header (desktop + mobile): dropdown with 5 most recent alerts, badge with unread count, polls every 60s.
+
+**Note:** Prisma client needs `npx prisma generate` for `alertLog` and `notificationPreference` models.
+
+---
+
+## TST-006: Round 8 Test Coverage — Email Notifier, Notification Prefs, Alerts
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+116 new tests across 3 files. Pipeline: 566 → 636 passed (43 skipped). Web: 345 → 387. Total: 1023 + 43 skipped.
+
+- `test_email_notifier.py` (70 tests): all 4 send methods, config guard, Resend error handling, template structure.
+- `notification-prefs.test.ts` (22 tests): GET/PATCH `/api/user/notifications` — defaults, validation, auth.
+- `alerts.test.ts` (24 tests): GET `/api/alerts` — pagination, type filtering, auth, edge cases.
+
+**Edge case:** `parseInt("0") || 20` treats `limit=0` as falsy → defaults to 20 instead of clamping to 1. Fixed by Coordinator using `Number.isFinite` check.
+
+---
+
+## BD-021: Alerts API limit=0 Edge Case Fix
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Coordinator
+
+Alerts route `GET /api/alerts` used `parseInt(param) || 20` for limit fallback. Since `parseInt("0")` returns `0` (falsy in JS), `limit=0` silently became 20. Fixed to use `Number.isFinite(parsed) ? parsed : 20` so only `NaN` falls to default. `limit=0` now correctly flows to `Math.max(0, 1) = 1`.

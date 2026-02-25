@@ -113,3 +113,9 @@
 - Facebook scraper stubs: still 43 `@pytest.mark.skip` stubs — left untouched, scraper not implemented.
 - **Edge case found:** Alerts route `parseInt("0") || 20` makes `limit=0` silently become 20 rather than clamping to 1. The `||` fallback treats 0 as falsy. Not a bug per se (0 items is meaningless), but inconsistent with `limit=-5` which gets `Math.max(-5, 1) = 1`.
 - Final counts: **pipeline 636 passed + 43 skipped = 679 total** (was 566+43=609), **web 387 tests** (was 345).
+
+**2026-02-24 (Round 8 cross-agent — from Utah):** Built `EmailNotifier` (Resend API) with 4 alert types. Inline HTML templates, graceful skip when no API key. `NotificationPreference` model (channel + per-type booleans) and `AlertLog` model in Prisma + SQLAlchemy. Notification prefs API (`GET/PATCH /api/user/notifications`), alert history API (`GET /api/alerts`). Google + GitHub OAuth providers. Key test file: `pipeline/notifiers/email_notifier.py`.
+
+**2026-02-24 (Round 8 cross-agent — from Tyler):** OAuth buttons on sign-in/register pages. `GlobalNotificationPreferences` section on Settings (channel selector, toggle switches). Alert history page `/alerts` with filter tabs, paginated cards, Load More. `NotificationBell` in nav with unread badge and 60s polling. Key test files: `web/src/__tests__/api/notification-prefs.test.ts`, `web/src/__tests__/api/alerts.test.ts`.
+
+**2026-02-24 (Round 8 cross-agent — from Coordinator):** Fixed alerts API `limit=0` edge case: `parseInt(param) || 20` treats 0 as falsy. Changed to `Number.isFinite(parsed) ? parsed : 20`.

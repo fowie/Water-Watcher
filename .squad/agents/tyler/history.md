@@ -338,3 +338,9 @@
 ### API Client (`web/src/lib/api.ts`)
 - Confirmed existing functions: `getNotificationPreferences()`, `updateNotificationPreferences()`, `getAlerts()`
 - `NotificationPreferences` and `AlertLogRecord` interfaces already present from prior round
+
+**2026-02-24 (Round 8 cross-agent — from Utah):** Built `EmailNotifier` using Resend API with 4 methods (deal, condition, hazard, digest). Created `NotificationPreference` and `AlertLog` models in Prisma + SQLAlchemy. Notification prefs API (`GET/PATCH /api/user/notifications`) with auto-create defaults. Alert history API (`GET /api/alerts`) with pagination and type filter. Added Google + GitHub OAuth providers to NextAuth. SQLAlchemy gotcha: `metadata` is reserved, used `extra_data` attribute mapped to `metadata` column.
+
+**2026-02-24 (Round 8 cross-agent — from Pappas):** 116 new tests: email notifier (70), notification prefs (22), alerts (24). Pipeline 636+43skip, Web 387, total 1023+43. Found `limit=0` treated as falsy in alerts route.
+
+**2026-02-24 (Round 8 cross-agent — from Coordinator):** Fixed alerts API `limit=0` edge case — `Number.isFinite` instead of `||` fallback.
