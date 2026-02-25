@@ -24,11 +24,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher}
+      DATABASE_URL: postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher
     volumes:
       - ./web/prisma:/app/prisma
       - ./web/package.json:/app/package.json
-    command: sh -c "npx prisma db push --skip-generate"
+    command: sh -c "npx prisma@6 db push --skip-generate --accept-data-loss"
     restart: "no"
 
   web:
@@ -44,7 +44,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher}
+      DATABASE_URL: postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-in-production}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
@@ -67,7 +67,7 @@ services:
       db-migrate:
         condition: service_completed_successfully
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher}
+      DATABASE_URL: postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:you@example.com}
