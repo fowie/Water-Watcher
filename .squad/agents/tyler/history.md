@@ -221,3 +221,7 @@
 - Updated `auth.ts` pages config: `signIn: "/auth/signin"` (was "/login").
 - Auth pages use full-screen centered layout (no navigation chrome) for clean sign-in/register UX.
 - `AuthGuard` uses client-side redirect pattern (not middleware) — simpler, works with SessionProvider, shows loading skeleton during check.
+
+**2026-02-24 (Round 6 cross-agent — from Utah):** Implemented NextAuth.js v5 with Credentials provider, JWT strategy, PBKDF2 hashing. `withAuth()` middleware injects `x-user-id` header. Registration endpoint at `POST /api/auth/register`. Route protection: public GET reads, auth-required writes, ownership-enforced deal filters (403 on mismatch). Key files: `auth.ts`, `auth-utils.ts`, `api-middleware.ts`.
+
+**2026-02-24 (Round 6 cross-agent — from Pappas):** 61 new auth tests covering registration (23), auth utils (23), and withAuth middleware (15). PBKDF2 produces 32-char hex salt + 128-char hex hash. Registration uses `.safeParse()` so validation errors return `{ error, details }` shape. Web test count: 236 → 300.

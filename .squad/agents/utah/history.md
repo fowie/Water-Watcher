@@ -189,3 +189,7 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 - `web/src/app/api/auth/[...nextauth]/route.ts` — NextAuth route handler
 - `web/src/app/api/auth/register/route.ts` — registration with Zod validation, 409 on duplicate email
 - Updated 4 route files + 4 test files. All 239 tests pass, build succeeds.
+
+**2026-02-24 (Round 6 cross-agent — from Tyler):** Built auth UI: sign-in/register pages, `AuthGuard` component, `SessionProvider` wrapper, `UserMenu` component. Settings page now uses `session.user.id` instead of `DEMO_USER_ID`. Navigation conditionally shows Settings when authenticated. 15 routes, build clean.
+
+**2026-02-24 (Round 6 cross-agent — from Pappas):** 61 new auth tests: `auth-register.test.ts` (23), `auth-utils.test.ts` (23), `api-middleware.test.ts` (15). Confirms withAuth injects x-user-id without mutating original request. Registration validation returns `{ error, details }` shape. Also created 80 skipped BLM/Facebook scraper test stubs. Web 300, Pipeline 487 total.

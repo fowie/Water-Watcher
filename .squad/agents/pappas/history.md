@@ -90,3 +90,7 @@
 - Created `test_facebook_scraper.py` (38 skipped tests): init, auth token handling, post parsing, date extraction, river mention detection, rate limiting, error handling — all `@pytest.mark.skip` stubs.
 - Observations: `withAuth` clones the Request and injects `x-user-id` — tests confirm original request is unmodified. Registration route uses Zod's `.safeParse()` so validation errors return `{ error, details }` shape. PBKDF2 with 16-byte random salt produces 32-char hex salt + 128-char hex hash.
 - Final counts: **web 300 tests** (was 236), **pipeline 407 passed + 80 skipped = 487 total** (was 407).
+
+**2026-02-24 (Round 6 cross-agent — from Utah):** Implemented NextAuth.js v5 with Credentials provider, JWT strategy, PBKDF2 hashing. `withAuth()` HOF validates session and injects `x-user-id`. Registration at `POST /api/auth/register` with Zod validation. Public routes: GET rivers/deals. Auth-required: all writes, deal filters, notifications. Key files: `auth.ts`, `auth-utils.ts`, `api-middleware.ts`.
+
+**2026-02-24 (Round 6 cross-agent — from Tyler):** Auth UI complete: sign-in/register pages (full-screen centered cards, no nav chrome), `AuthGuard` (useSession + redirect), `SessionProvider` wrapping app, `UserMenu` in sidebar/header. Settings uses `session.user.id` instead of `DEMO_USER_ID`. 15 routes, build clean.

@@ -73,9 +73,9 @@ Client components with useEffect + useCallback via `api.ts`. Debounced search (3
 ---
 
 ## FE-004: Demo User ID for Filters
-**Status:** Temporary — **Date:** 2026-02-24 — **By:** Tyler
+**Status:** Superseded by BD-018 — **Date:** 2026-02-24 — **By:** Tyler
 
-`DEMO_USER_ID = "demo-user"` hardcoded. Replace with actual auth when user management is implemented.
+`DEMO_USER_ID = "demo-user"` hardcoded. Replaced with real NextAuth.js session-based user IDs in Round 6.
 
 ---
 
@@ -344,3 +344,54 @@ Added 166 tests across 5 files. Pipeline: 278 → 407. Web: 199 → 236. Total: 
 3. **`classify_runnability(inf)` returns None** — Dangerous range uses `< inf` upper bound, so `inf < inf` is False. Logically incomplete.
 
 All three bugs were fixed by the Coordinator in Round 5.
+
+---
+
+## BD-018: Authentication with NextAuth.js v5
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Implemented real authentication using NextAuth.js v5 (Auth.js) with Credentials provider and JWT session strategy, replacing the hardcoded `DEMO_USER_ID = "demo-user"` pattern (FE-004 superseded).
+
+| Aspect | Choice |
+|--------|--------|
+| Auth Library | NextAuth.js v5 (`next-auth@beta`) |
+| Session Strategy | JWT (stateless, no DB session lookups) |
+| Initial Provider | Credentials (email + password) |
+| Password Hashing | Node.js `crypto.pbkdf2Sync` (100K iterations, SHA-512) |
+| Adapter | `@auth/prisma-adapter` (stores accounts, enables future OAuth) |
+
+**Route Protection:** Public: GET rivers/deals. Auth required: all writes, deal filters, notification subscribe. Ownership enforced on deal filters (403 on mismatch).
+
+**Why JWT:** No session table lookups on every request. Session model kept in schema for future database session option.
+
+**Why PBKDF2 over bcrypt:** Avoids native module compilation (node-gyp). NIST-recommended, built into Node.js.
+
+---
+
+## FE-009: Auth UI Pattern
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Client-side session checking via NextAuth `SessionProvider` + `useSession()` rather than Next.js middleware-based auth gating.
+
+- `SessionProvider` wraps entire app in root `layout.tsx` — all client components can access session.
+- `AuthGuard` component uses `useSession()` + `useEffect` redirect pattern. Shows skeleton during loading, redirects to `/auth/signin?callbackUrl=…` when unauthenticated.
+- Navigation conditionally shows Settings link when authenticated. User menu in sidebar (desktop) and header (mobile).
+- Auth pages (`/auth/signin`, `/auth/register`) render without navigation chrome — full-screen centered cards.
+- Registration uses Zod client-side validation → `/api/auth/register` → auto-sign-in on success.
+- Replaced `DEMO_USER_ID` in settings page with actual `session.user.id`.
+
+---
+
+## TST-004: Auth System Test Coverage
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+61 new auth tests + 80 skipped scraper stubs. Web: 236 → 300. Pipeline: 407 passed + 80 skipped = 487 total.
+
+**New test files:**
+- `auth-register.test.ts` (23): registration validation, duplicate email, select clause, error handling.
+- `auth-utils.test.ts` (23): hashPassword format/salt-uniqueness, verifyPassword edge cases, getCurrentUser/requireAuth.
+- `api-middleware.test.ts` (15): withAuth 401 variants, x-user-id injection, request immutability.
+- `test_blm_scraper.py` (42 skipped): init, URL, parsing, rate limiting, normalization stubs.
+- `test_facebook_scraper.py` (38 skipped): init, auth, post parsing, date extraction, river mentions stubs.
+
+No behavioral changes to production code.
