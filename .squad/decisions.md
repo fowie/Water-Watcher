@@ -395,3 +395,60 @@ Client-side session checking via NextAuth `SessionProvider` + `useSession()` rat
 - `test_facebook_scraper.py` (38 skipped): init, auth, post parsing, date extraction, river mentions stubs.
 
 No behavioral changes to production code.
+
+---
+
+## BD-019: Land Agency Scraper Architecture
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+BLM and USFS scrapers run on a separate 6-hour schedule (`run_land_agency_scrapers()`) rather than being added to the existing 4-hour river scraper cycle.
+
+**Rationale:**
+- Land agency advisory data changes much less frequently than USGS gauge data or AW trip reports
+- BLM and USFS APIs have stricter rate limits; fewer requests = better citizen behavior
+- USFS RIDB API requires an API key (`RIDB_API_KEY`); scraper gracefully skips when key is absent
+- Separate schedule allows independent tuning via `LAND_AGENCY_INTERVAL_MINUTES`
+- Both scrapers include `river_name` in ScrapedItem data so the condition processor's `_find_river()` name-based fallback can match them to tracked rivers (no `aw_id` or `usgs_gauge_id` available from these sources)
+
+| Setting | Env Var | Default |
+|---------|---------|---------|
+| `blm_base_url` | `BLM_BASE_URL` | `https://www.blm.gov/services/recreation` |
+| `ridb_api_key` | `RIDB_API_KEY` | `""` (empty = skip USFS) |
+| `land_agency_interval_minutes` | `LAND_AGENCY_INTERVAL_MINUTES` | `360` (6 hours) |
+
+---
+
+## FE-010: Profile, Compare, Favorites Features
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+**User Profile Page** — Route: `/profile`, protected by `AuthGuard`. Inline edit for name/email via PATCH `/api/user/profile`. Session refreshed after edits so nav reflects changes.
+
+**River Comparison View** — Route: `/rivers/compare?rivers=id1,id2,id3`. Shareable URLs via query params (2-3 rivers max). Desktop: comparison table. Mobile: stacked cards. "Compare" button on rivers page enters selection mode (checkbox UI on cards).
+
+**Tracked Rivers / Favorites** — Route: `/rivers/favorites`, protected by `AuthGuard`. New API: `GET/POST/DELETE /api/user/rivers` — all `withAuth()`-protected. Uses existing `UserRiver` model (already in Prisma schema). Star/heart icon on river cards toggles tracking. "My Rivers" nav link added to `authNavItems` (visible only when authenticated).
+
+**Navigation Changes** — Added "My Rivers" (Star icon) to sidebar/bottom bar (auth-only). Added "Profile" link in user menu dropdown (above Settings). Mobile avatar links to `/profile`.
+
+**Cross-agent notes:** No Prisma schema changes needed (UserRiver model already existed). Three new API route handlers at `/api/user/rivers` use standard `withAuth()` + Prisma patterns.
+
+---
+
+## QA-003: BLM Advisory Type Map Ordering & River Name Extraction
+**Status:** Observation — **Date:** 2026-02-24 — **By:** Pappas
+
+**Advisory type map ordering:** BLM scraper's `ADVISORY_TYPE_MAP` dict ordering causes "winter closure" text to match the "closure" keyword before reaching the more specific "winter closure" → "seasonal_access" entry. Same pattern in USFS `ALERT_TYPE_MAP`. Impact is low — both classify as functionally similar (area inaccessible). Fix if distinguishing seasonal vs. emergency closures matters: reorder maps to check longest-match-first.
+
+**River name extraction:** BLM `_extract_river_name` uses a greedy regex that captures all consecutive capitalized words before "River"/"Creek"/"Canyon"/"Fork". When river name appears in multiple fields (title, area, description), combined text can produce duplicate matches like "Salmon Creek Salmon Creek". Per-field extraction or deduplication would be more precise.
+
+---
+
+## TST-005: Round 7 Test Coverage — BLM, USFS, Profile, User Rivers
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+204 new tests across 4 files. Pipeline: 407 → 566 passed (43 skipped). Web: 300 → 345. Total: 954.
+
+**New/rewritten test files:**
+- `test_blm_scraper.py` (88 tests, replacing 42 skipped stubs): advisory type/severity classification, river name extraction, date parsing, API+RSS response parsing, rate limiting, error handling, full integration.
+- `test_usfs_scraper.py` (71 tests): API key gating, alert type/severity classification, river name extraction, facility/rec area alert parsing, HTTP mocked fetch, rate limiting, full integration.
+- `user-profile.test.ts` (22 tests): GET profile with counts, PATCH name/email, 409 duplicate email, validation errors, no passwordHash leak.
+- `user-rivers.test.ts` (23 tests): GET tracked rivers, POST add/duplicate/missing, DELETE remove/not-tracked, validation, auth enforcement.

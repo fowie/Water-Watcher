@@ -288,3 +288,7 @@
 - Star button on each river card toggles tracking via `POST`/`DELETE /api/user/rivers`
 - Toast notifications on track/untrack success and failure
 - Tracking state managed as `Set<string>` of river IDs
+
+**2026-02-24 (Round 7 cross-agent — from Utah):** Created BLM + USFS scrapers on 6-hour schedule (`run_land_agency_scrapers()`). BLM scraper: recreation API + RSS feed, advisory classification. USFS scraper: RIDB API with key gating. Created `GET/PATCH /api/user/profile` with `withAuth()`, duplicate-email check, riverCount/filterCount. New settings: `BLM_BASE_URL`, `RIDB_API_KEY`, `LAND_AGENCY_INTERVAL_MINUTES`.
+
+**2026-02-24 (Round 7 cross-agent — from Pappas):** 204 new tests covering all Round 7 features. User profile tests (22): GET/PATCH, validation, auth. User rivers tests (23): GET/POST/DELETE, duplicates, auth. BLM (88) and USFS (71) scraper tests. Total: 954 tests.

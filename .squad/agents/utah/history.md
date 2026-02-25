@@ -230,3 +230,7 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 ### Test Results
 - Pipeline: 407 passed, 80 skipped
 - Web: 300 passed
+
+**2026-02-24 (Round 7 cross-agent — from Tyler):** Built profile page (`/profile`), river comparison view (`/rivers/compare`), favorites page (`/rivers/favorites`), and `GET/POST/DELETE /api/user/rivers`. Star button on river cards toggles tracking. Compare mode with checkbox selection (max 3). Navigation: "My Rivers" auth-only link, "Profile" in user menu. 20 routes, build clean.
+
+**2026-02-24 (Round 7 cross-agent — from Pappas):** 204 new tests: BLM scraper 88 (replaced skipped stubs), USFS scraper 71, user profile 22, user rivers 23. Pipeline 566+43 skipped, Web 345, total 954. Discovered BLM advisory type map ordering quirk and river name extraction greedy regex issue — documented as observations.
