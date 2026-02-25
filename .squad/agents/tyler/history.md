@@ -225,3 +225,66 @@
 **2026-02-24 (Round 6 cross-agent — from Utah):** Implemented NextAuth.js v5 with Credentials provider, JWT strategy, PBKDF2 hashing. `withAuth()` middleware injects `x-user-id` header. Registration endpoint at `POST /api/auth/register`. Route protection: public GET reads, auth-required writes, ownership-enforced deal filters (403 on mismatch). Key files: `auth.ts`, `auth-utils.ts`, `api-middleware.ts`.
 
 **2026-02-24 (Round 6 cross-agent — from Pappas):** 61 new auth tests covering registration (23), auth utils (23), and withAuth middleware (15). PBKDF2 produces 32-char hex salt + 128-char hex hash. Registration uses `.safeParse()` so validation errors return `{ error, details }` shape. Web test count: 236 → 300.
+
+**2026-02-24:** User profile page, river comparison view, favorites/tracked rivers, and navigation updates:
+
+### User Profile Page (`web/src/app/profile/page.tsx`)
+- AuthGuard-protected profile page at `/profile`
+- Profile card: avatar/initials, name, email, member since date
+- Inline editing: name + email fields with save/cancel, calls `PATCH /api/user/profile`
+- Session is refreshed after profile edit so nav reflects updated name
+- Stats section: rivers tracked count, deal filters active count (from existing API)
+- Member-since badge using `timeAgo()` utility
+- Layout with metadata title "Profile"
+
+### River Comparison View (`web/src/app/rivers/compare/page.tsx`)
+- Side-by-side comparison of 2-3 rivers
+- State managed via URL query params (`?rivers=id1,id2,id3`) for shareable links
+- Desktop: HTML table with metric rows (Quality, Flow Rate, Water Temp, Gauge Height, Difficulty, Hazards, Runnability)
+- Mobile: stacked cards with stat rows
+- Visual "Best" badges on highest values; "Safest" badge on fewest hazards
+- `Promise.allSettled` for resilient loading — shows whatever rivers succeed
+- Empty state with back-to-rivers link when no IDs provided
+
+### Compare Mode on Rivers Page (`web/src/app/rivers/page.tsx`)
+- "Compare" button in header enters selection mode
+- Selection mode: cards show checkbox, clicking selects (no navigation)
+- Max 3 rivers selectable; toast warning when exceeding
+- "Compare (N)" button navigates to `/rivers/compare?rivers=...`
+- "Cancel" button exits compare mode and clears selection
+
+### Favorites / Tracked Rivers (`web/src/app/rivers/favorites/page.tsx`)
+- AuthGuard-protected favorites page at `/rivers/favorites`
+- Shows user's tracked rivers via `GET /api/user/rivers`
+- Rivers can be untracked inline via the star button on each card
+- Empty state with guidance to star rivers from the main rivers page
+
+### Tracked Rivers API (`web/src/app/api/user/rivers/route.ts`)
+- `GET /api/user/rivers` — returns user's tracked rivers with latest conditions, hazard counts, tracker counts
+- `POST /api/user/rivers` — add river to tracking (body: `{ riverId }`), validates river exists, returns 409 if already tracked
+- `DELETE /api/user/rivers?riverId=xxx` — remove from tracking, returns 204
+- All routes wrapped in `withAuth()` for authentication
+
+### API Client Updates (`web/src/lib/api.ts`)
+- Added `getTrackedRivers()`, `trackRiver(riverId)`, `untrackRiver(riverId)` functions
+- Added `TrackedRiver` and `TrackedRiversResponse` interfaces
+
+### River Card Enhancements (`web/src/components/river-card.tsx`)
+- Added `isFavorited`, `onToggleFavorite` props — star icon button appears on hover (always visible when favorited, filled yellow)
+- Added `selectable`, `selected`, `onSelect` props — checkbox UI for compare mode
+- In selection mode, clicking the card calls `onSelect` instead of navigating
+- Keyboard accessible: `role="button"`, `tabIndex`, Enter/Space key handling
+
+### Navigation Updates (`web/src/components/navigation.tsx`)
+- Added "My Rivers" to `authNavItems` (Star icon, `/rivers/favorites`), shows only when authenticated
+- Appears in desktop sidebar, mobile sheet, and bottom tab bar
+
+### User Menu Updates (`web/src/components/user-menu.tsx`)
+- Added "Profile" link to desktop dropdown (User icon, `/profile`), appears above Settings
+- Mobile avatar now links to `/profile` instead of `/settings`
+
+### Rivers Page Tracking Integration (`web/src/app/rivers/page.tsx`)
+- Fetches tracked river IDs on mount (authenticated users only)
+- Star button on each river card toggles tracking via `POST`/`DELETE /api/user/rivers`
+- Toast notifications on track/untrack success and failure
+- Tracking state managed as `Set<string>` of river IDs

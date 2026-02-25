@@ -193,3 +193,40 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 6 cross-agent — from Tyler):** Built auth UI: sign-in/register pages, `AuthGuard` component, `SessionProvider` wrapper, `UserMenu` component. Settings page now uses `session.user.id` instead of `DEMO_USER_ID`. Navigation conditionally shows Settings when authenticated. 15 routes, build clean.
 
 **2026-02-24 (Round 6 cross-agent — from Pappas):** 61 new auth tests: `auth-register.test.ts` (23), `auth-utils.test.ts` (23), `api-middleware.test.ts` (15). Confirms withAuth injects x-user-id without mutating original request. Registration validation returns `{ error, details }` shape. Also created 80 skipped BLM/Facebook scraper test stubs. Web 300, Pipeline 487 total.
+
+**2026-02-24:** Built BLM scraper, USFS scraper, user profile API, and wired into pipeline:
+
+### BLM Scraper (`pipeline/scrapers/blm.py`)
+- Extends `BaseScraper`, name="blm", source priority 70
+- Fetches from BLM's recreation API (`BLM_BASE_URL/api/alerts`) and RSS feed (`BLM_BASE_URL/rss/alerts.xml`)
+- Extracts: advisory type (closure/fire_restriction/water_advisory/seasonal_access), severity, river name, dates, description
+- River name extraction via regex patterns matching "[Name] River/Creek/Canyon/Fork"
+- Rate limiting: 2s between requests
+- Handles: timeouts, non-JSON responses, missing fields, malformed XML
+- RSS parser supports both RSS 2.0 and Atom formats
+- All ScrapedItems include `river_name` for `_find_river()` name-based fallback
+
+### USFS Scraper (`pipeline/scrapers/usfs.py`)
+- Extends `BaseScraper`, name="usfs", source priority 70
+- Uses RIDB API at `https://ridb.recreation.gov/api/v1/` with `RIDB_API_KEY`
+- Fetches facility alerts (filtered by water activities) and recreation area alerts
+- Same river name extraction and severity classification as BLM
+- Rate limiting: 1s between requests
+- Graceful skip when `RIDB_API_KEY` not configured
+
+### Pipeline Integration
+- New scheduled job `run_land_agency_scrapers()` runs both BLM + USFS every 6 hours (configurable via `LAND_AGENCY_INTERVAL_MINUTES`)
+- Added `BLM_BASE_URL`, `RIDB_API_KEY`, `land_agency_interval_minutes` to `pipeline/config/settings.py`
+- Updated `.env.example` with new vars
+- Updated `pipeline/scrapers/__init__.py` to export both scrapers
+- Fixed `test_main.py` assertions (2→3 jobs, all IDs checked)
+
+### User Profile API (`web/src/app/api/user/profile/route.ts`)
+- GET: returns user profile with `riverCount` and `filterCount` via `_count` select
+- PATCH: updates name/email with duplicate email check (409 on conflict)
+- Both protected with `withAuth()` middleware
+- Added `getUserProfile()` and `updateUserProfile()` client functions to `web/src/lib/api.ts`
+
+### Test Results
+- Pipeline: 407 passed, 80 skipped
+- Web: 300 passed

@@ -67,6 +67,14 @@ export function UserMenuDesktop() {
           </div>
           <div className="py-1">
             <Link
+              href="/profile"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--secondary)] transition-colors"
+            >
+              <User className="h-4 w-4" />
+              Profile
+            </Link>
+            <Link
               href="/settings"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--secondary)] transition-colors"
@@ -134,7 +142,7 @@ export function UserMenuMobile() {
 
   return (
     <Link
-      href="/settings"
+      href="/profile"
       className="flex items-center gap-1.5"
       title={user.name || "Account"}
     >

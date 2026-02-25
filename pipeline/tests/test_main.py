@@ -106,6 +106,7 @@ class TestSchedulerConfig:
         """River scrapers job should use settings.scrape_interval_minutes."""
         mock_settings.scrape_interval_minutes = 240
         mock_settings.raft_watch_interval_minutes = 30
+        mock_settings.land_agency_interval_minutes = 360
         mock_scheduler = MagicMock()
         mock_sched_cls.return_value = mock_scheduler
         # main() catches SystemExit, so use KeyboardInterrupt to exit cleanly
@@ -115,7 +116,7 @@ class TestSchedulerConfig:
         main()  # Does not raise — main catches KeyboardInterrupt
 
         calls = mock_scheduler.add_job.call_args_list
-        assert len(calls) == 2
+        assert len(calls) == 3
 
         # First job: river scrapers
         river_call = calls[0]
@@ -130,6 +131,7 @@ class TestSchedulerConfig:
         """Raft Watch job should use settings.raft_watch_interval_minutes."""
         mock_settings.scrape_interval_minutes = 240
         mock_settings.raft_watch_interval_minutes = 30
+        mock_settings.land_agency_interval_minutes = 360
         mock_scheduler = MagicMock()
         mock_sched_cls.return_value = mock_scheduler
         mock_scheduler.start.side_effect = KeyboardInterrupt()
@@ -147,9 +149,10 @@ class TestSchedulerConfig:
     @patch("main.settings")
     def test_jobs_have_ids(self, mock_settings, mock_signal,
                            mock_validate, mock_sched_cls):
-        """Both jobs should have unique IDs."""
+        """All jobs should have unique IDs."""
         mock_settings.scrape_interval_minutes = 240
         mock_settings.raft_watch_interval_minutes = 30
+        mock_settings.land_agency_interval_minutes = 360
         mock_scheduler = MagicMock()
         mock_sched_cls.return_value = mock_scheduler
         mock_scheduler.start.side_effect = KeyboardInterrupt()
@@ -161,6 +164,7 @@ class TestSchedulerConfig:
         ids = [c.kwargs.get("id") or c[1].get("id") for c in calls]
         assert "river_scrapers" in ids
         assert "raft_watch" in ids
+        assert "land_agency_scrapers" in ids
 
     @patch("main.BlockingScheduler")
     @patch("main._validate_startup")
@@ -168,9 +172,10 @@ class TestSchedulerConfig:
     @patch("main.settings")
     def test_jobs_run_immediately_on_start(self, mock_settings, mock_signal,
                                            mock_validate, mock_sched_cls):
-        """Both jobs should have next_run_time set to run immediately."""
+        """All jobs should have next_run_time set to run immediately."""
         mock_settings.scrape_interval_minutes = 240
         mock_settings.raft_watch_interval_minutes = 30
+        mock_settings.land_agency_interval_minutes = 360
         mock_scheduler = MagicMock()
         mock_sched_cls.return_value = mock_scheduler
         mock_scheduler.start.side_effect = KeyboardInterrupt()

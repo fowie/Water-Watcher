@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConditionBadge } from "./condition-badge";
-import { Droplets, AlertTriangle, Users, ChevronRight, Trash2 } from "lucide-react";
+import { Droplets, AlertTriangle, Users, ChevronRight, Trash2, Star } from "lucide-react";
 import { formatFlowRate } from "@/lib/utils";
 import { deleteRiver } from "@/lib/api";
 import type { RiverSummary } from "@/types";
@@ -12,9 +12,19 @@ import type { RiverSummary } from "@/types";
 interface RiverCardProps {
   river: RiverSummary;
   onDelete?: () => void;
+  /** Whether this river is in the user's favorites */
+  isFavorited?: boolean;
+  /** Called when the user toggles the favorite star */
+  onToggleFavorite?: () => void;
+  /** Whether the card is in "selection mode" for comparison */
+  selectable?: boolean;
+  /** Whether the card is currently selected for comparison */
+  selected?: boolean;
+  /** Called when the card is selected/deselected */
+  onSelect?: (riverId: string) => void;
 }
 
-export function RiverCard({ river, onDelete }: RiverCardProps) {
+export function RiverCard({ river, onDelete, isFavorited, onToggleFavorite, selectable, selected, onSelect }: RiverCardProps) {
   const cond = river.latestCondition;
   const timeAgo = cond?.scrapedAt
     ? getRelativeTime(new Date(cond.scrapedAt))
@@ -32,19 +42,63 @@ export function RiverCard({ river, onDelete }: RiverCardProps) {
     }
   };
 
-  return (
-    <Link href={`/rivers/${river.id}`}>
-      <Card className="group hover:shadow-md transition-shadow cursor-pointer h-full relative">
+  const handleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleFavorite?.();
+  };
+
+  const handleSelect = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onSelect?.(river.id);
+  };
+
+  const cardContent = (
+    <Card className={`group hover:shadow-md transition-shadow cursor-pointer h-full relative ${selectable && selected ? "ring-2 ring-[var(--primary)]" : ""}`}>
+      {/* Action buttons — top right */}
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
+        {onToggleFavorite && (
+          <button
+            onClick={handleFavorite}
+            className={`p-1.5 rounded-md transition-all ${
+              isFavorited
+                ? "text-yellow-500 opacity-100"
+                : "opacity-0 group-hover:opacity-100 focus:opacity-100 text-[var(--muted-foreground)] hover:text-yellow-500"
+            }`}
+            title={isFavorited ? "Remove from tracked rivers" : "Track this river"}
+            aria-label={isFavorited ? `Untrack ${river.name}` : `Track ${river.name}`}
+          >
+            <Star className={`h-4 w-4 ${isFavorited ? "fill-current" : ""}`} aria-hidden="true" />
+          </button>
+        )}
         {onDelete && (
           <button
             onClick={handleDelete}
-            className="absolute top-3 right-3 z-10 p-1.5 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-[var(--muted)] hover:bg-[var(--destructive)] hover:text-white text-[var(--muted-foreground)]"
+            className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-[var(--muted)] hover:bg-[var(--destructive)] hover:text-white text-[var(--muted-foreground)]"
             title="Delete river"
             aria-label={`Delete ${river.name}`}
           >
             <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         )}
+        {selectable && (
+          <button
+            onClick={handleSelect}
+            className={`p-1.5 rounded-md border transition-colors ${
+              selected
+                ? "bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]"
+                : "border-[var(--border)] bg-[var(--background)] hover:bg-[var(--secondary)]"
+            }`}
+            title={selected ? "Deselect" : "Select for comparison"}
+            aria-label={selected ? `Deselect ${river.name}` : `Select ${river.name} for comparison`}
+          >
+            <div className={`h-3.5 w-3.5 flex items-center justify-center text-xs font-bold ${selected ? "" : "opacity-50"}`}>
+              {selected ? "✓" : ""}
+            </div>
+          </button>
+        )}
+      </div>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="space-y-1 flex-1 min-w-0">
@@ -103,6 +157,20 @@ export function RiverCard({ river, onDelete }: RiverCardProps) {
           )}
         </CardContent>
       </Card>
+  );
+
+  // In selection mode, clicking the card selects it (no navigation)
+  if (selectable) {
+    return (
+      <div onClick={handleSelect} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect?.(river.id); } }}>
+        {cardContent}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/rivers/${river.id}`}>
+      {cardContent}
     </Link>
   );
 }

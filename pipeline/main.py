@@ -21,6 +21,8 @@ from config.settings import settings
 from scrapers.usgs import USGSScraper
 from scrapers.american_whitewater import AmericanWhitewaterScraper
 from scrapers.craigslist import CraigslistScraper
+from scrapers.blm import BLMScraper
+from scrapers.usfs import USFSScraper
 from processors.condition_processor import ConditionProcessor
 from processors.deal_matcher import DealMatcher
 from notifiers.push_notifier import PushNotifier
@@ -122,6 +124,40 @@ def run_raft_watch():
         logger.error(f"Raft Watch failed: {e}", exc_info=True)
 
 
+def run_land_agency_scrapers():
+    """Run BLM and USFS scrapers for land agency advisories.
+
+    Runs both scrapers and processes their output through the condition
+    processor. These update less frequently than water gauges.
+    """
+    logger.info("Starting land agency scrape cycle")
+    processor = ConditionProcessor()
+    notifier = PushNotifier()
+
+    scrapers = [
+        BLMScraper(),
+        USFSScraper(),
+    ]
+
+    for scraper in scrapers:
+        try:
+            logger.info(f"Running {scraper.name}...")
+            raw_data = scraper.scrape()
+            processed = processor.process(raw_data, source=scraper.name)
+            logger.info(f"{scraper.name}: processed {len(processed)} records")
+
+            for record in processed:
+                if record.get("quality_changed"):
+                    notifier.notify_condition_change(
+                        river_id=record["river_id"],
+                        river_name=record.get("river_name", "Unknown River"),
+                        old_quality=record["old_quality"],
+                        new_quality=record["new_quality"],
+                    )
+        except Exception as e:
+            logger.error(f"{scraper.name} failed: {e}", exc_info=True)
+
+
 def main():
     _validate_startup()
 
@@ -130,6 +166,7 @@ def main():
     logger.info(f"Time: {datetime.now().isoformat()}")
     logger.info(f"River scrape interval: {settings.scrape_interval_minutes}m")
     logger.info(f"Raft Watch interval: {settings.raft_watch_interval_minutes}m")
+    logger.info(f"Land agency interval: {settings.land_agency_interval_minutes}m")
     logger.info("=" * 60)
 
     scheduler = BlockingScheduler()
@@ -151,6 +188,16 @@ def main():
         minutes=settings.raft_watch_interval_minutes,
         id="raft_watch",
         name="Raft Watch (Craigslist Deals)",
+        next_run_time=datetime.now(),
+    )
+
+    # Land agency advisories (BLM + USFS) — every 6 hours by default
+    scheduler.add_job(
+        run_land_agency_scrapers,
+        "interval",
+        minutes=settings.land_agency_interval_minutes,
+        id="land_agency_scrapers",
+        name="Land Agency Scrapers (BLM + USFS)",
         next_run_time=datetime.now(),
     )
 

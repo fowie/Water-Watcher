@@ -55,6 +55,24 @@ class Settings:
         )
     )
 
+    # BLM (Bureau of Land Management)
+    blm_base_url: str = field(
+        default_factory=lambda: os.getenv(
+            "BLM_BASE_URL",
+            "https://www.blm.gov/services/recreation",
+        )
+    )
+
+    # USFS (US Forest Service) — RIDB API
+    ridb_api_key: str = field(
+        default_factory=lambda: os.getenv("RIDB_API_KEY", "")
+    )
+
+    # Land agency scrape interval (minutes)
+    land_agency_interval_minutes: int = field(
+        default_factory=lambda: int(os.getenv("LAND_AGENCY_INTERVAL_MINUTES", "360"))
+    )
+
     # Push notifications
     vapid_public_key: str = field(
         default_factory=lambda: os.getenv("NEXT_PUBLIC_VAPID_PUBLIC_KEY", "")

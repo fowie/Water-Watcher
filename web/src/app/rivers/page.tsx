@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,8 +16,9 @@ import {
 import { RiverCard } from "@/components/river-card";
 import { AddRiverDialog } from "@/components/add-river-dialog";
 import { EmptyState } from "@/components/empty-state";
-import { getRivers } from "@/lib/api";
-import { Search, Mountain, X } from "lucide-react";
+import { getRivers, getTrackedRivers, trackRiver, untrackRiver } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
+import { Search, Mountain, X, GitCompareArrows } from "lucide-react";
 import type { RiverSummary } from "@/types";
 
 const DIFFICULTY_CLASSES = [
@@ -48,12 +51,23 @@ const DIFFICULTY_CHIP_ACTIVE: Record<string, string> = {
 type SortOption = "name-asc" | "recently-updated" | "most-hazards";
 
 export default function RiversPage() {
+  const router = useRouter();
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
+
   const [rivers, setRivers] = useState<RiverSummary[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDifficulties, setSelectedDifficulties] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
+
+  // Compare mode
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set());
+
+  // Tracked/favorited river IDs
+  const [trackedIds, setTrackedIds] = useState<Set<string>>(new Set());
 
   const fetchRivers = useCallback(async () => {
     setLoading(true);
@@ -72,6 +86,89 @@ export default function RiversPage() {
     const timeout = setTimeout(fetchRivers, search ? 300 : 0);
     return () => clearTimeout(timeout);
   }, [fetchRivers, search]);
+
+  // Fetch tracked river IDs for authenticated users
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    getTrackedRivers()
+      .then((data) => {
+        setTrackedIds(new Set(data.rivers.map((r) => r.id)));
+      })
+      .catch(() => {
+        // Silent — tracks are a nice-to-have overlay
+      });
+  }, [isAuthenticated]);
+
+  const toggleCompareSelect = (riverId: string) => {
+    setSelectedForCompare((prev) => {
+      const next = new Set(prev);
+      if (next.has(riverId)) {
+        next.delete(riverId);
+      } else {
+        if (next.size >= 3) {
+          toast({
+            title: "Max 3 rivers",
+            description: "You can compare up to 3 rivers at a time.",
+            variant: "destructive",
+          });
+          return prev;
+        }
+        next.add(riverId);
+      }
+      return next;
+    });
+  };
+
+  const goToCompare = () => {
+    if (selectedForCompare.size < 2) {
+      toast({
+        title: "Select at least 2 rivers",
+        description: "Pick 2-3 rivers to compare.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const ids = Array.from(selectedForCompare).join(",");
+    router.push(`/rivers/compare?rivers=${ids}`);
+  };
+
+  const exitCompareMode = () => {
+    setCompareMode(false);
+    setSelectedForCompare(new Set());
+  };
+
+  const handleToggleFavorite = async (river: RiverSummary) => {
+    const isTracked = trackedIds.has(river.id);
+    try {
+      if (isTracked) {
+        await untrackRiver(river.id);
+        setTrackedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(river.id);
+          return next;
+        });
+        toast({
+          title: "River untracked",
+          description: `"${river.name}" removed from your tracked rivers.`,
+          variant: "success",
+        });
+      } else {
+        await trackRiver(river.id);
+        setTrackedIds((prev) => new Set(prev).add(river.id));
+        toast({
+          title: "River tracked!",
+          description: `"${river.name}" added to your tracked rivers.`,
+          variant: "success",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Failed",
+        description: err instanceof Error ? err.message : "Could not update tracking.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const toggleDifficulty = (diff: string) => {
     setSelectedDifficulties((prev) => {
@@ -139,7 +236,41 @@ export default function RiversPage() {
             Track conditions across your favorite rivers
           </p>
         </div>
-        <AddRiverDialog onRiverAdded={fetchRivers} />
+        <div className="flex items-center gap-2">
+          {compareMode ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exitCompareMode}
+              >
+                <X className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={goToCompare}
+                disabled={selectedForCompare.size < 2}
+              >
+                <GitCompareArrows className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                Compare ({selectedForCompare.size})
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCompareMode(true)}
+                disabled={rivers.length < 2}
+              >
+                <GitCompareArrows className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                Compare
+              </Button>
+              <AddRiverDialog onRiverAdded={fetchRivers} />
+            </>
+          )}
+        </div>
       </div>
 
       {/* Search + Sort */}
@@ -223,7 +354,16 @@ export default function RiversPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredAndSorted.map((river) => (
-            <RiverCard key={river.id} river={river} onDelete={fetchRivers} />
+            <RiverCard
+              key={river.id}
+              river={river}
+              onDelete={compareMode ? undefined : fetchRivers}
+              isFavorited={trackedIds.has(river.id)}
+              onToggleFavorite={isAuthenticated && !compareMode ? () => handleToggleFavorite(river) : undefined}
+              selectable={compareMode}
+              selected={selectedForCompare.has(river.id)}
+              onSelect={compareMode ? toggleCompareSelect : undefined}
+            />
           ))}
         </div>
       )}

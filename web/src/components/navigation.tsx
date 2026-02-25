@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Settings,
+  Star,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenuDesktop, UserMenuMobile } from "@/components/user-menu";
@@ -25,6 +26,7 @@ const publicNavItems = [
 ];
 
 const authNavItems = [
+  { href: "/rivers/favorites", label: "My Rivers", icon: Star },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

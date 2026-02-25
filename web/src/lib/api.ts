@@ -150,6 +150,63 @@ export async function getHealth(): Promise<HealthResponse> {
   return res.json();
 }
 
+// ─── User Profile ───────────────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  name: string | null;
+  email: string | null;
+  createdAt: string;
+  riverCount: number;
+  filterCount: number;
+}
+
+export async function getUserProfile(): Promise<UserProfile> {
+  return fetcher<UserProfile>("/api/user/profile");
+}
+
+export async function updateUserProfile(data: {
+  name?: string;
+  email?: string;
+}): Promise<UserProfile> {
+  return fetcher<UserProfile>("/api/user/profile", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Tracked Rivers (Favorites) ─────────────────────────
+
+export interface TrackedRiver extends RiverSummary {
+  trackedAt: string;
+}
+
+export interface TrackedRiversResponse {
+  rivers: TrackedRiver[];
+}
+
+export async function getTrackedRivers(): Promise<TrackedRiversResponse> {
+  return fetcher<TrackedRiversResponse>("/api/user/rivers");
+}
+
+export async function trackRiver(riverId: string): Promise<{ id: string; riverId: string }> {
+  return fetcher<{ id: string; riverId: string }>("/api/user/rivers", {
+    method: "POST",
+    body: JSON.stringify({ riverId }),
+  });
+}
+
+export async function untrackRiver(riverId: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/user/rivers?riverId=${encodeURIComponent(riverId)}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok && res.status !== 204) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Failed to untrack: ${res.status}`);
+  }
+}
+
 // ─── Notifications ──────────────────────────────────────
 
 export async function subscribePush(
