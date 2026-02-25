@@ -4,7 +4,16 @@ import type {
   GearDealRecord,
   DealFilterRecord,
 } from "@/types";
-import type { RiverInput, RiverUpdateInput, DealFilterInput, DealFilterUpdateInput } from "@/lib/validations";
+import type {
+  RiverInput,
+  RiverUpdateInput,
+  DealFilterInput,
+  DealFilterUpdateInput,
+  TripInput,
+  TripUpdateInput,
+  TripStopInput,
+  ReviewInput,
+} from "@/lib/validations";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -291,6 +300,162 @@ export async function exportData(
     throw new Error(body.error ?? `Export failed: ${res.status}`);
   }
   return res.blob();
+}
+
+// ─── Trips ──────────────────────────────────────────────
+
+export interface TripRecord {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  status: "planning" | "active" | "completed" | "cancelled";
+  notes: string | null;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  stops: TripStopRecord[];
+  _count?: { stops: number };
+}
+
+export interface TripStopRecord {
+  id: string;
+  tripId: string;
+  riverId: string;
+  dayNumber: number;
+  notes: string | null;
+  putInTime: string | null;
+  takeOutTime: string | null;
+  sortOrder: number;
+  createdAt: string;
+  river: {
+    id: string;
+    name: string;
+    state: string;
+    difficulty: string | null;
+  };
+}
+
+export interface TripsResponse {
+  trips: TripRecord[];
+}
+
+export async function getTrips(params?: {
+  status?: string;
+  upcoming?: boolean;
+}): Promise<TripsResponse> {
+  const sp = new URLSearchParams();
+  if (params?.status) sp.set("status", params.status);
+  if (params?.upcoming) sp.set("upcoming", "true");
+  const q = sp.toString();
+  return fetcher<TripsResponse>(`/api/trips${q ? `?${q}` : ""}`);
+}
+
+export async function createTrip(data: TripInput): Promise<TripRecord> {
+  return fetcher<TripRecord>("/api/trips", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getTrip(id: string): Promise<TripRecord> {
+  return fetcher<TripRecord>(`/api/trips/${id}`);
+}
+
+export async function updateTrip(
+  id: string,
+  data: TripUpdateInput
+): Promise<TripRecord> {
+  return fetcher<TripRecord>(`/api/trips/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTrip(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/trips/${id}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok && res.status !== 204) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Delete failed: ${res.status}`);
+  }
+}
+
+export async function addTripStop(
+  tripId: string,
+  data: TripStopInput
+): Promise<TripStopRecord> {
+  return fetcher<TripStopRecord>(`/api/trips/${tripId}/stops`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function removeTripStop(
+  tripId: string,
+  stopId: string
+): Promise<void> {
+  const res = await fetch(`${BASE}/api/trips/${tripId}/stops/${stopId}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok && res.status !== 204) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Delete failed: ${res.status}`);
+  }
+}
+
+// ─── River Reviews ──────────────────────────────────────
+
+export interface ReviewRecord {
+  id: string;
+  riverId: string;
+  userId: string;
+  rating: number;
+  title: string | null;
+  body: string;
+  visitDate: string | null;
+  difficulty: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  };
+}
+
+export interface ReviewsResponse {
+  reviews: ReviewRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+  averageRating: number | null;
+}
+
+export async function getRiverReviews(
+  riverId: string,
+  params?: { limit?: number; offset?: number }
+): Promise<ReviewsResponse> {
+  const sp = new URLSearchParams();
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const q = sp.toString();
+  return fetcher<ReviewsResponse>(
+    `/api/rivers/${riverId}/reviews${q ? `?${q}` : ""}`
+  );
+}
+
+export async function submitReview(
+  riverId: string,
+  data: ReviewInput
+): Promise<ReviewRecord> {
+  return fetcher<ReviewRecord>(`/api/rivers/${riverId}/reviews`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 // ─── Helpers ────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/auth-utils";
 import { apiError, handleApiError } from "@/lib/api-errors";
+import { rateLimit, strictAuthConfig } from "@/lib/rate-limit";
 
 const registerSchema = z.object({
   email: z.string().email("Valid email is required"),
@@ -11,6 +12,23 @@ const registerSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  // Rate limit: 5 per minute for registration
+  const rl = rateLimit(request, strictAuthConfig);
+  if (!rl.success) {
+    const retryAfter = Math.max(1, rl.reset - Math.ceil(Date.now() / 1000));
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(retryAfter),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(rl.reset),
+        },
+      }
+    );
+  }
+
   try {
     const body = await request.json();
     const parsed = registerSchema.safeParse(body);

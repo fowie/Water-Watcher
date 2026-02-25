@@ -40,6 +40,8 @@ class User(Base):
     push_subscriptions = relationship("PushSubscription", back_populates="user")
     notification_preferences = relationship("NotificationPreference", back_populates="user", uselist=False)
     alert_logs = relationship("AlertLog", back_populates="user")
+    trips = relationship("Trip", back_populates="user")
+    reviews = relationship("RiverReview", back_populates="user")
 
 
 class River(Base):
@@ -62,6 +64,8 @@ class River(Base):
     conditions = relationship("RiverCondition", back_populates="river")
     hazards = relationship("Hazard", back_populates="river")
     tracked_by = relationship("UserRiver", back_populates="river")
+    trip_stops = relationship("TripStop", back_populates="river")
+    reviews = relationship("RiverReview", back_populates="river")
 
 
 class RiverCondition(Base):
@@ -242,4 +246,69 @@ class AlertLog(Base):
 
     __table_args__ = (
         Index("ix_alert_logs_user_sent", "user_id", "sent_at"),
+    )
+
+
+class Trip(Base):
+    __tablename__ = "trips"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
+    status = Column(String, nullable=False, default="planning")
+    notes = Column(Text)
+    is_public = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
+
+    user = relationship("User", back_populates="trips")
+    stops = relationship("TripStop", back_populates="trip")
+
+    __table_args__ = (
+        Index("ix_trips_user_start", "user_id", "start_date"),
+    )
+
+
+class TripStop(Base):
+    __tablename__ = "trip_stops"
+
+    id = Column(String, primary_key=True)
+    trip_id = Column(String, ForeignKey("trips.id", ondelete="CASCADE"), nullable=False)
+    river_id = Column(String, ForeignKey("rivers.id", ondelete="CASCADE"), nullable=False)
+    day_number = Column(Integer, nullable=False)
+    notes = Column(Text)
+    put_in_time = Column(String)
+    take_out_time = Column(String)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_utc_now)
+
+    trip = relationship("Trip", back_populates="stops")
+    river = relationship("River", back_populates="trip_stops")
+
+    __table_args__ = (
+        Index("ix_trip_stops_trip_day", "trip_id", "day_number"),
+    )
+
+
+class RiverReview(Base):
+    __tablename__ = "river_reviews"
+
+    id = Column(String, primary_key=True)
+    river_id = Column(String, ForeignKey("rivers.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    rating = Column(Integer, nullable=False)
+    title = Column(String)
+    body = Column(Text, nullable=False)
+    visit_date = Column(DateTime)
+    difficulty = Column(String)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
+
+    river = relationship("River", back_populates="reviews")
+    user = relationship("User", back_populates="reviews")
+
+    __table_args__ = (
+        Index("ix_river_reviews_river_created", "river_id", "created_at"),
     )

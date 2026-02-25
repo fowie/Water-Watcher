@@ -14,7 +14,9 @@ import { MapLink } from "@/components/map-link";
 import { Button } from "@/components/ui/button";
 import { FlowTrend } from "@/components/flow-trend";
 import { WeatherWidget } from "@/components/weather-widget";
-import { getRiver } from "@/lib/api";
+import { RiverReviews } from "@/components/river-reviews";
+import { ReviewForm } from "@/components/review-form";
+import { getRiver, getRiverReviews } from "@/lib/api";
 import { formatFlowRate, timeAgo } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -31,6 +33,7 @@ import {
   XCircle,
   Clock,
   CloudSun,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import type { RiverDetail, ConditionRecord, HazardRecord, CampsiteRecord, RapidRecord } from "@/types";
@@ -41,12 +44,22 @@ export default function RiverDetailPage() {
   const [river, setRiver] = useState<RiverDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reviewFormOpen, setReviewFormOpen] = useState(false);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [reviewCount, setReviewCount] = useState(0);
 
   const loadRiver = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getRiver(id);
+      const [data, reviewsData] = await Promise.all([
+        getRiver(id),
+        getRiverReviews(id, { limit: 1 }).catch(() => null),
+      ]);
       setRiver(data);
+      if (reviewsData) {
+        setAvgRating(reviewsData.averageRating);
+        setReviewCount(reviewsData.total);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load river");
     } finally {
@@ -166,9 +179,18 @@ export default function RiverDetailPage() {
         </div>
       )}
 
+      {/* Average rating in header area */}
+      {avgRating != null && (
+        <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+          <MessageSquare className="h-4 w-4" aria-hidden="true" />
+          <span className="font-medium">{avgRating.toFixed(1)}</span>
+          <span>({reviewCount} {reviewCount === 1 ? "review" : "reviews"})</span>
+        </div>
+      )}
+
       {/* Tabbed content */}
       <Tabs defaultValue="conditions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="conditions">
             <Droplets className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
             Conditions
@@ -189,6 +211,10 @@ export default function RiverDetailPage() {
             <Tent className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
             Campsites
           </TabsTrigger>
+          <TabsTrigger value="reviews">
+            <MessageSquare className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
+            Reviews
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="conditions">
@@ -205,6 +231,15 @@ export default function RiverDetailPage() {
         </TabsContent>
         <TabsContent value="campsites">
           <CampsitesTab campsites={river.campsites ?? []} />
+        </TabsContent>
+        <TabsContent value="reviews">
+          <RiverReviews riverId={id} onWriteReview={() => setReviewFormOpen(true)} />
+          <ReviewForm
+            riverId={id}
+            open={reviewFormOpen}
+            onOpenChange={setReviewFormOpen}
+            onSuccess={loadRiver}
+          />
         </TabsContent>
       </Tabs>
     </main>

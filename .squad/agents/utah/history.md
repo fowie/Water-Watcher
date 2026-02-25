@@ -352,3 +352,55 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 9 cross-agent — from Pappas):** 98 new tests (web 387→485, total 1,164). SSE endpoint tests (19): headers, retry directive, event shapes, null fields. Export tests (41): auth, validation, JSON/CSV/GPX formats, escaping, user scoping. SSE client tests (38): factory, event parsing, weather utility logic. Found 3 bugs: (1) SSE deal-match events leaked userId — fixed by removing userId from event data; (2) SSE cancel() didn't call clearInterval — fixed; (3) GPX type validation ran after data fetch — moved before fetch. Also noted CSV `#` section headers are non-standard.
 
 **2026-02-24 (Round 9 cross-agent — from Coordinator):** Fixed all 3 bugs found by Pappas: removed userId from SSE deal-match events, added clearInterval in cancel() callback, moved GPX type validation before fetchExportData(). Updated stale test assertion for limit=0 behavior.
+
+**2026-02-24:** Round 10 — Trip Planner API, River Reviews, Rate Limiting Middleware:
+
+### Trip Planner API
+- New Prisma models: `Trip` (with status workflow: planning/active/completed/cancelled) and `TripStop` (per-day river stop with put-in/take-out times)
+- Relations: `User.trips`, `River.tripStops` added to both Prisma and SQLAlchemy
+- 5 API endpoints: `GET/POST /api/trips`, `GET/PATCH/DELETE /api/trips/:id`
+- Trip stops sub-resource: `POST /api/trips/:id/stops`, `DELETE /api/trips/:id/stops/:stopId`
+- GET trips supports `status` filter and `upcoming` boolean (startDate >= now)
+- GET trip detail returns stops with full river info (name, state, difficulty, lat/lng)
+- All endpoints auth-protected with `withAuth()`, owner-only for writes (403 on mismatch)
+- Zod schemas: `tripSchema` (with `.refine()` for endDate >= startDate), `tripUpdateSchema`, `tripStopSchema`
+- API client: `getTrips()`, `createTrip()`, `getTrip()`, `updateTrip()`, `deleteTrip()`, `addTripStop()`, `removeTripStop()`
+
+### River Reviews/Comments
+- New Prisma model: `RiverReview` with `@@unique([riverId, userId])` — one review per river per user
+- Relations: `User.reviews`, `River.reviews` added to both Prisma and SQLAlchemy
+- 2 API endpoints: `GET /api/rivers/:id/reviews` (public, paginated, includes average rating), `POST /api/rivers/:id/reviews` (auth, upserts on riverId+userId)
+- POST uses `prisma.riverReview.upsert()` so submitting again updates rather than errors
+- GET returns reviews with user info (id, name, image) and aggregate `averageRating`
+- Zod schema: `reviewSchema` (rating 1-5, body required)
+- API client: `getRiverReviews(riverId)`, `submitReview(riverId, data)`
+- POST rate-limited at 10 per minute
+
+### Rate Limiting Middleware
+- New `web/src/lib/rate-limit.ts` — in-memory token bucket algorithm with IP-based keys
+- `rateLimit(request, config)` returns `{ success, remaining, reset }`
+- Token refill based on elapsed time since last check — smooth rate enforcement
+- Stale entry cleanup every 60 seconds (entries older than 5 minutes removed)
+- Pre-configured configs: `defaultConfig` (60/min), `authConfig` (10/min), `strictAuthConfig` (5/min), `reviewConfig` (10/min)
+- `resetRateLimiter()` exported for test isolation
+- New `withRateLimit(handler, config?)` HOF in `api-middleware.ts` — composable with `withAuth()`
+- Returns 429 with `Retry-After` header when exceeded, adds `X-RateLimit-Remaining` and `X-RateLimit-Reset` to all responses
+- Applied to: auth register (5/min strict), river review POST (10/min)
+- Had to mock `@/lib/rate-limit` in `auth-register.test.ts` to prevent token bucket exhaustion across 23 sequential test requests
+
+### SQLAlchemy Mirror
+- Added `Trip`, `TripStop`, `RiverReview` models to `pipeline/models/models.py`
+- Updated `User.trips`, `User.reviews`, `River.trip_stops`, `River.reviews` relationships
+- All indexes match Prisma schema
+
+### Key File Paths
+- `web/src/lib/rate-limit.ts` — token bucket rate limiter
+- `web/src/app/api/trips/route.ts` — trip list/create
+- `web/src/app/api/trips/[id]/route.ts` — trip detail/update/delete
+- `web/src/app/api/trips/[id]/stops/route.ts` — add stop
+- `web/src/app/api/trips/[id]/stops/[stopId]/route.ts` — remove stop
+- `web/src/app/api/rivers/[id]/reviews/route.ts` — river reviews
+
+### Test Results
+- Web: 485 passed (no regressions, auth test mock added)
+- Pipeline: 636 passed, 43 skipped (no regressions)

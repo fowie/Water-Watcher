@@ -64,3 +64,61 @@ export const pushSubscriptionSchema = z.object({
 });
 
 export type PushSubscriptionInput = z.infer<typeof pushSubscriptionSchema>;
+
+// ─── Trips ────────────────────────────────────────────────
+
+export const tripSchema = z.object({
+  name: z.string().min(1, "Trip name is required"),
+  startDate: z.string().datetime({ message: "Valid start date is required" }),
+  endDate: z.string().datetime({ message: "Valid end date is required" }),
+  status: z.enum(["planning", "active", "completed", "cancelled"]).default("planning"),
+  notes: z.string().optional(),
+  isPublic: z.boolean().default(false),
+}).refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
+  message: "End date must be on or after start date",
+  path: ["endDate"],
+});
+
+export type TripInput = z.infer<typeof tripSchema>;
+
+export const tripUpdateSchema = z.object({
+  name: z.string().min(1, "Trip name is required").optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  status: z.enum(["planning", "active", "completed", "cancelled"]).optional(),
+  notes: z.string().nullable().optional(),
+  isPublic: z.boolean().optional(),
+}).refine((data) => {
+  if (data.startDate && data.endDate) {
+    return new Date(data.endDate) >= new Date(data.startDate);
+  }
+  return true;
+}, {
+  message: "End date must be on or after start date",
+  path: ["endDate"],
+});
+
+export type TripUpdateInput = z.infer<typeof tripUpdateSchema>;
+
+export const tripStopSchema = z.object({
+  riverId: z.string().min(1, "River ID is required"),
+  dayNumber: z.number().int().min(1, "Day number must be at least 1"),
+  notes: z.string().optional(),
+  putInTime: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format").optional(),
+  takeOutTime: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format").optional(),
+  sortOrder: z.number().int().default(0),
+});
+
+export type TripStopInput = z.infer<typeof tripStopSchema>;
+
+// ─── River Reviews ────────────────────────────────────────
+
+export const reviewSchema = z.object({
+  rating: z.number().int().min(1, "Rating must be at least 1").max(5, "Rating must be at most 5"),
+  title: z.string().optional(),
+  body: z.string().min(1, "Review body is required"),
+  visitDate: z.string().datetime().optional(),
+  difficulty: z.string().optional(),
+});
+
+export type ReviewInput = z.infer<typeof reviewSchema>;

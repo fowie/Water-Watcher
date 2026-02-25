@@ -18,6 +18,8 @@ import {
   Bell,
   MapIcon,
   Download,
+  Compass,
+  BarChart3,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenuDesktop, UserMenuMobile } from "@/components/user-menu";
@@ -32,6 +34,8 @@ const publicNavItems = [
 
 const authNavItems = [
   { href: "/rivers/favorites", label: "My Rivers", icon: Star },
+  { href: "/trips", label: "Trips", icon: Compass },
+  { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/export", label: "Export", icon: Download },
   { href: "/settings", label: "Settings", icon: Settings },

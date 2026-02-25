@@ -42,6 +42,13 @@ vi.mock("@/lib/api-errors", async () => {
   };
 });
 
+vi.mock("@/lib/rate-limit", () => ({
+  rateLimit: () => ({ success: true, remaining: 10, reset: Math.ceil(Date.now() / 1000) + 60 }),
+  strictAuthConfig: { maxTokens: 5, refillRate: 5 / 60, refillInterval: 1 },
+  defaultConfig: { maxTokens: 60, refillRate: 1, refillInterval: 1 },
+  resetRateLimiter: () => {},
+}));
+
 import { POST } from "@/app/api/auth/register/route";
 
 function mockRequest(body: unknown): Request {

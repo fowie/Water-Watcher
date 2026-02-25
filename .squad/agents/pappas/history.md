@@ -135,3 +135,12 @@
 
 **2026-02-24 (Round 9 cross-agent — from Coordinator):** Fixed all 3 bugs found this round: removed userId from SSE deal-match events, added clearInterval in cancel() callback, moved GPX type validation before fetchExportData().
 
+**2026-02-24:** Round 10 — Test coverage for Trip Planner, River Reviews, and Rate Limiting. Four new test files (87 new tests):
+- `trips.test.ts` (30 tests): GET list with auth/status/upcoming filters, POST create with validation (missing name, endDate before startDate, invalid status), defaults (status=planning, isPublic), GET by ID with stops+river details, 404/403/401 for non-existent/non-owner/unauthenticated, public trip access by non-owner, PATCH owner-only update with status/name fields, DELETE owner-only with 204/403/404.
+- `trip-stops.test.ts` (17 tests): POST add stop with river validation, 400 for missing riverId/invalid dayNumber/bad time format, 404 for missing trip/river, 403 for non-owner, optional notes/putInTime/takeOutTime, DELETE stop with 204/404 (non-existent, wrong trip), 403 non-owner.
+- `reviews.test.ts` (20 tests): GET paginated with averageRating, default ordering (createdAt desc), empty reviews → null average, 404 for non-existent river, limit/offset clamping, user info inclusion, POST create/upsert, validation (rating 1-5, non-integer rating, body required/empty), 404 for non-existent river, 401 unauthenticated, optional visitDate/difficulty, 429 when rate limited.
+- `rate-limit.test.ts` (20 tests): Token bucket fills to max, consumes tokens, rate limit exceeded returns false, refill over time (vi.advanceTimersByTime), no refill beyond max, separate buckets per IP, x-real-ip fallback, 127.0.0.1 default, stale entry cleanup, withRateLimit 429 with Retry-After + X-RateLimit-Remaining=0 headers, X-RateLimit-Remaining/Reset on success, handler not called when limited, withRateLimit+withAuth composition.
+- **Observation:** Reviews GET route has no sort parameter — always orders by `createdAt desc`. Task specified testing sort={recent,highest,lowest} but that feature isn't implemented. Tested the default ordering instead.
+- **Observation:** `tripUpdateSchema` uses `.optional()` on all fields but has no `.refine()` for endDate >= startDate on PATCH. You could PATCH endDate to be before startDate without error. The create schema has this refinement but the update schema doesn't.
+- Final counts: **web 572 tests** (was 485), **pipeline 636 passed + 43 skipped = 679 total** (unchanged). Grand total: **1,251**.
+

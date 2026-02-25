@@ -34,3 +34,7 @@ export { AuthGuard } from "./auth-guard";
 export { SessionProvider } from "./session-provider";
 export { Navigation } from "./navigation";
 export { WeatherWidget } from "./weather-widget";
+export { TripCard } from "./trip-card";
+export { RiverPickerDialog } from "./river-picker-dialog";
+export { RiverReviews, StarRating } from "./river-reviews";
+export { ReviewForm } from "./review-form";

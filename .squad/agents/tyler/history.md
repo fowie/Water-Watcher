@@ -401,3 +401,70 @@
 **2026-02-24 (Round 9 cross-agent — from Pappas):** 98 new tests (web 387→485, total 1,164). SSE tests (19), export tests (41), SSE client + weather tests (38). Found 3 bugs — all fixed by Coordinator: SSE deal-match userId leak removed, SSE cancel() cleanup added, GPX validation moved before data fetch. Observation: CSV `#` section headers are non-standard.
 
 **2026-02-24 (Round 9 cross-agent — from Coordinator):** Fixed 3 bugs: removed userId from SSE deal-match events, added clearInterval in cancel() callback, moved GPX type validation before fetchExportData().
+
+**2026-02-24:** Round 10 — Trip Planner, River Reviews UI, Admin Stats Dashboard:
+
+### Trip Planner Page (`web/src/app/trips/page.tsx`)
+- AuthGuard-protected trip listing page at `/trips`
+- Filter tabs: All, Upcoming, Past, Cancelled — pill-style toggle buttons with client-side filtering
+- Search input for filtering trips by name
+- "New Trip" button opens create dialog with name, date range, notes, public toggle
+- Trip cards (`web/src/components/trip-card.tsx`) show name, date range, day count, stop count, status badge
+- Status badges color-coded: planning=blue, active=green, completed=gray, cancelled=red
+- Empty state with CTA to create first trip
+- Layout + loading.tsx created
+
+### Trip Detail Page (`web/src/app/trips/[id]/page.tsx`)
+- Breadcrumb navigation back to trip list
+- Editable name/dates/notes (inline edit mode with Save/Cancel)
+- Day-by-day itinerary: cards for each day in the trip date range
+- Each day card shows stops in sort order with timeline indicators (dot + line)
+- Each stop shows: river name (linked), difficulty badge, state, put-in/take-out times, notes
+- "Add River" button per day opens `RiverPickerDialog` to search and select rivers
+- Remove stop button (X icon) with confirm dialog, visible on hover
+- Status change buttons: Start Trip (planning→active), Complete (active→completed), Cancel
+- Share button copies trip URL to clipboard (visible when trip is public)
+- Delete trip button with confirm
+
+### River Picker Dialog (`web/src/components/river-picker-dialog.tsx`)
+- Dialog/modal for selecting a river to add to a trip stop
+- Search input with 300ms debounce, fetches from `GET /api/rivers`
+- Shows river name, state, difficulty badge per result
+- Click selects and closes dialog
+- Loading and empty states
+
+### River Reviews UI
+- `web/src/components/river-reviews.tsx` — Reviews display component
+  - Average rating as filled/half/empty star icons (`StarRating` component)
+  - Review count text with rating number
+  - Sort buttons: Most Recent, Highest, Lowest
+  - Individual review cards: user avatar/name, star rating, title, body, visit date, perceived difficulty badge, relative timestamp
+  - Write Review button (auth-only)
+  - Empty state with CTA to write first review
+- `web/src/components/review-form.tsx` — Review form dialog
+  - Star rating selector with hover preview (1-5 stars)
+  - Title input (optional), body textarea (required)
+  - Visit date picker, difficulty selector dropdown (Class I–V+)
+  - Submit button with loading state, success toast
+  - Pre-fill support for editing existing reviews
+- Added "Reviews" tab to river detail page (`web/src/app/rivers/[id]/page.tsx`)
+  - Tab grid expanded from 5 to 6 columns (MessageSquare icon)
+  - Average rating displayed in river header area
+  - Loads review summary (avg rating + count) alongside river data via `Promise.all`
+
+### Stats Dashboard (`web/src/app/stats/page.tsx`)
+- AuthGuard-protected stats page at `/stats`
+- Summary cards row: Total Rivers, Active Hazards, Total Deals, Your Trips, Rivers Tracked
+- Condition Quality Breakdown: CSS conic-gradient donut chart with color-coded legend (excellent=green, good=blue, fair=yellow, poor=orange, dangerous=red, unknown=gray)
+- Recent Activity feed: last 10 alerts with type icons, titles, and relative timestamps
+- Your Stats section: rivers tracked, trips planned, deal filters, total rivers
+- All data fetched via `Promise.allSettled` for resilient loading
+- Layout + loading.tsx created
+
+### Navigation Updates (`web/src/components/navigation.tsx`)
+- Added "Trips" (Compass icon, `/trips`) and "Stats" (BarChart3 icon, `/stats`) to `authNavItems`
+- Both appear in desktop sidebar, mobile sheet, and bottom tab bar (auth-only)
+- Placed between My Rivers and Alerts in the nav order
+
+### Component Index Updates
+- Exported: `TripCard`, `RiverPickerDialog`, `RiverReviews`, `StarRating`, `ReviewForm`
