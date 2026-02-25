@@ -47,3 +47,9 @@
 **2026-02-24 (Round 4 cross-agent — from Pappas):** 51 new web tests (199 total). 477 total tests (199 web + 278 pipeline).
 
 **2026-02-24 (Round 4 cross-agent — from Coordinator):** Fixed timeAgo bugs — added weeks bucket, graceful invalid input handling.
+
+**2026-02-24 (Round 9 cross-agent — from Utah):** Built SSE endpoint (`GET /api/sse/rivers`) for real-time updates, PWA manifest + service worker caching (cache-first for static, network-first for API), data export API (`GET /api/export`) supporting JSON/CSV/GPX. BD-023 supersedes BD-010.
+
+**2026-02-24 (Round 9 cross-agent — from Tyler):** Interactive map (`/map`) with vanilla Leaflet, `WeatherWidget` (Open-Meteo API), export page (`/export`). Observation FE-015: rivers GET may need lat/lng in summary response for map to work.
+
+**2026-02-24 (Round 9 cross-agent — from Pappas):** 98 new tests (web 485, total 1,164). Found 3 bugs (SSE userId leak, interval cleanup, GPX validation order) — all fixed by Coordinator.

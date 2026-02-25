@@ -509,3 +509,85 @@ Alert history page at `/alerts` (AuthGuard-protected): filter tabs (All/Deals/Co
 **Status:** Accepted — **Date:** 2026-02-24 — **By:** Coordinator
 
 Alerts route `GET /api/alerts` used `parseInt(param) || 20` for limit fallback. Since `parseInt("0")` returns `0` (falsy in JS), `limit=0` silently became 20. Fixed to use `Number.isFinite(parsed) ? parsed : 20` so only `NaN` falls to default. `limit=0` now correctly flows to `Math.max(0, 1) = 1`.
+
+---
+
+## BD-022: SSE for Real-Time Updates (Not WebSocket)
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Chose Server-Sent Events over WebSocket for real-time river condition updates. SSE is simpler with Next.js App Router (just a GET route returning a ReadableStream), works natively with HTTP/2, auto-reconnects via `retry:` directive, and is sufficient since data flow is server→client only. The endpoint polls the database every 30 seconds rather than using database triggers or pub/sub, keeping infrastructure simple (no Redis/message broker needed). Client-side `useRiverSSE` hook implements exponential backoff (1s–30s max) for reconnection.
+
+---
+
+## BD-023: Service Worker Caching Strategy
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Updated `web/public/sw.js` (previously notifications-only per BD-010) to add caching strategies:
+- **Cache-first** for static assets (JS, CSS, fonts, images, `/_next/static/`) — fast repeat loads
+- **Network-first** for API calls — fresh data preferred, cached fallback when offline
+- **SSE excluded** from caching entirely (streaming connections can't be cached)
+- **Cache versioning** via `CACHE_VERSION` constant — old caches cleaned up on activate
+- **`skipWaiting()`** on install for immediate activation of new versions
+
+This supersedes BD-010's "no caching" stance. Next.js handles its own build-time caching, but the SW cache layer adds true offline support and faster asset loading. The two strategies don't conflict because the SW cache is keyed by request URL, same as Next.js's cache-busted asset URLs.
+
+---
+
+## BD-024: Data Export API Design
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Export endpoint at `GET /api/export` supports three formats via query param:
+- **JSON**: Structured data with `Content-Disposition: attachment`
+- **CSV**: RFC 4180-compliant with proper escaping (commas, quotes, newlines)
+- **GPX**: Valid GPX 1.1 XML for GPS devices — only for river waypoints with lat/lng
+
+Scope is user's data only: tracked rivers, conditions (last 30 days), matched deals. The `type` param (rivers|conditions|deals|all) controls which data categories to include. GPX returns 400 for non-river types since waypoints require coordinates.
+
+All formats use Zod validation on query params and `withAuth()` for access control.
+
+---
+
+## FE-012: Vanilla Leaflet Over react-leaflet
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Used vanilla Leaflet with `useRef` + `useEffect` + dynamic `import()` instead of react-leaflet for the `/map` page. react-leaflet has known compatibility issues with Next.js App Router SSR (Leaflet requires `window`). The vanilla approach with dynamic import and a cleanup function in useEffect is more robust and avoids adding another dependency. Leaflet CSS loaded from CDN (`unpkg.com/leaflet@1.9.4/dist/leaflet.css`).
+
+---
+
+## FE-013: Weather Widget via Open-Meteo
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Weather data for river detail pages uses the Open-Meteo free API (no API key, no rate limits for personal use). Added as a "Weather" tab on the river detail page rather than an always-visible section, to keep the page scannable and not load weather data until the user clicks the tab (lazy via tab activation → component mount). Converts Celsius to Fahrenheit and km/h to mph for US-centric audience.
+
+---
+
+## FE-014: Export Page — GPX Format Restriction
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+GPX export format is automatically disabled when the user selects a data type other than "Rivers", since GPX requires lat/lng waypoints. If the user changes type while GPX is selected, format auto-switches to JSON to prevent invalid exports. This avoids confusing error states.
+
+---
+
+## FE-015: Map Page River Data Requires lat/lng on RiverSummary
+**Status:** Observation — **Date:** 2026-02-24 — **By:** Tyler
+
+The map page fetches rivers via `getRivers()` which returns `RiverSummary` — this type currently does NOT include `latitude`/`longitude`. The API response (`/api/rivers` GET) would need to include these fields for the map to populate markers. Rivers without coordinates are silently excluded from the map. If the API doesn't return lat/lng on the summary endpoint, the map will be empty. The backend (Utah) should ensure the rivers GET API includes `latitude` and `longitude` in its response, or we need a separate endpoint.
+
+---
+
+## QA-004: Round 9 Test Coverage & Security Observations
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+Added 98 new tests across 3 files. Web: 387 → 485. Pipeline unchanged (636 + 43 skipped). Grand total: 1,164.
+
+**New test files:**
+- `sse-rivers.test.ts` (19 tests): SSE response headers, retry directive, event data shapes, null field handling, Prisma error graceful handling.
+- `export.test.ts` (41 tests): auth protection, format/type validation, JSON/CSV/GPX structure, escaping, user-scoped data, 30-day condition window.
+- `sse-client.test.ts` (38 tests): SSE client factory, cleanup, event parsing, weather utility logic (WMO code mapping, temperature/speed conversion).
+
+**Issues found:**
+1. **SSE userId leak (Security)** — `GET /api/sse/rivers` has no auth. Deal-match events include `userId`, `filterName`, `filterId`, leaking user-specific data to any listener.
+2. **SSE interval leak** — `cancel()` callback on ReadableStream is empty; `setInterval` timer runs forever after client disconnects. The `closed` flag prevents enqueueing but doesn't stop the polling loop.
+3. **GPX early validation** — GPX export rejects invalid `type` only inside `gpxExport()`, after `fetchExportData()` already queried the DB. Moving the check before the fetch avoids unnecessary queries.
+
+**Observation:** CSV export uses `# Rivers` section headers — `#` is not standard CSV and may confuse some parsers.

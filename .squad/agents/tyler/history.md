@@ -395,3 +395,9 @@
 ### Dependencies
 - Installed `leaflet` + `@types/leaflet` via npm
 - No react-leaflet — using vanilla Leaflet with refs to avoid Next.js App Router SSR issues
+
+**2026-02-24 (Round 9 cross-agent — from Utah):** Built SSE endpoint (`GET /api/sse/rivers`) with `ReadableStream`, 30-second DB polling, three event types (condition-update, hazard-alert, deal-match), retry:5000 auto-reconnect. Created `useRiverSSE` React hook with exponential backoff (1s–30s). Updated PWA manifest + layout meta tags. Enhanced service worker with cache-first/network-first strategies and cache versioning. Built data export API (`GET /api/export`) — JSON, CSV (RFC 4180), GPX (1.1 XML) with Zod validation and `withAuth()`. Key files: `web/src/app/api/sse/rivers/route.ts`, `web/src/lib/sse.ts`, `web/src/app/api/export/route.ts`, `web/public/sw.js`, `web/public/manifest.json`.
+
+**2026-02-24 (Round 9 cross-agent — from Pappas):** 98 new tests (web 387→485, total 1,164). SSE tests (19), export tests (41), SSE client + weather tests (38). Found 3 bugs — all fixed by Coordinator: SSE deal-match userId leak removed, SSE cancel() cleanup added, GPX validation moved before data fetch. Observation: CSV `#` section headers are non-standard.
+
+**2026-02-24 (Round 9 cross-agent — from Coordinator):** Fixed 3 bugs: removed userId from SSE deal-match events, added clearInterval in cancel() callback, moved GPX type validation before fetchExportData().

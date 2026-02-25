@@ -129,3 +129,9 @@
 - **Observation:** GPX export rejects `conditions` and `deals` types only inside `gpxExport()` (after data is already fetched). The validation could happen earlier to avoid unnecessary DB queries.
 - Final counts: **web 485 tests** (was 387), **pipeline 636 passed + 43 skipped = 679 total** (unchanged).
 
+**2026-02-24 (Round 9 cross-agent — from Utah):** Built SSE endpoint (`GET /api/sse/rivers`) with ReadableStream, 30-second DB polling, three event types (condition-update, hazard-alert, deal-match). Created `useRiverSSE` React hook with exponential backoff. Updated PWA manifest + layout meta tags. Enhanced service worker with cache-first/network-first strategies. Built data export API (`GET /api/export`) supporting JSON, CSV, GPX. Fixed stale alerts test assertion. Key files: `web/src/app/api/sse/rivers/route.ts`, `web/src/lib/sse.ts`, `web/src/app/api/export/route.ts`.
+
+**2026-02-24 (Round 9 cross-agent — from Tyler):** Built interactive map page (`/map`) using vanilla Leaflet (dynamic import, no react-leaflet). Color-coded markers, search, geolocation, desktop sidebar + mobile bottom sheet. `WeatherWidget` using Open-Meteo API (tab on river detail page). Export page (`/export`) with card-based selectors, GPX auto-disable. Nav updated with Map + Export links. Observation: map needs lat/lng on RiverSummary.
+
+**2026-02-24 (Round 9 cross-agent — from Coordinator):** Fixed all 3 bugs found this round: removed userId from SSE deal-match events, added clearInterval in cancel() callback, moved GPX type validation before fetchExportData().
+

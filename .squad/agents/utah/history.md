@@ -346,3 +346,9 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 - `web/public/manifest.json` — PWA manifest
 - `web/public/sw.js` — Service worker with caching
 - `web/src/app/api/export/route.ts` — Data export API
+
+**2026-02-24 (Round 9 cross-agent — from Tyler):** Built interactive map page (`/map`) using vanilla Leaflet with dynamic `import()` to avoid SSR issues — no react-leaflet. Color-coded markers by condition quality, click-to-popup river details, search filter, geolocation button. Desktop: right sidebar. Mobile: bottom sheet. `WeatherWidget` component using Open-Meteo API (current + 3-day forecast, °C→°F, km/h→mph), added as new tab on river detail page. Export page (`/export`) with format/type selectors, GPX auto-disable when type != rivers. Nav updated with Map (public) and Export (auth-only). Observation FE-015: map requires lat/lng on `RiverSummary` — if rivers GET doesn't include coordinates, map will be empty.
+
+**2026-02-24 (Round 9 cross-agent — from Pappas):** 98 new tests (web 387→485, total 1,164). SSE endpoint tests (19): headers, retry directive, event shapes, null fields. Export tests (41): auth, validation, JSON/CSV/GPX formats, escaping, user scoping. SSE client tests (38): factory, event parsing, weather utility logic. Found 3 bugs: (1) SSE deal-match events leaked userId — fixed by removing userId from event data; (2) SSE cancel() didn't call clearInterval — fixed; (3) GPX type validation ran after data fetch — moved before fetch. Also noted CSV `#` section headers are non-standard.
+
+**2026-02-24 (Round 9 cross-agent — from Coordinator):** Fixed all 3 bugs found by Pappas: removed userId from SSE deal-match events, added clearInterval in cancel() callback, moved GPX type validation before fetchExportData(). Updated stale test assertion for limit=0 behavior.
