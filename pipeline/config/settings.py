@@ -94,5 +94,18 @@ class Settings:
         )
     )
 
+    # Facebook
+    facebook_access_token: str = field(
+        default_factory=lambda: os.getenv("FACEBOOK_ACCESS_TOKEN", "")
+    )
+    facebook_pages: list[str] = field(
+        default_factory=lambda: os.getenv(
+            "FACEBOOK_PAGES", "americanwhitewater,whitewaterkayaking"
+        ).split(",")
+    )
+    facebook_interval_minutes: int = field(
+        default_factory=lambda: int(os.getenv("FACEBOOK_INTERVAL_MINUTES", "360"))
+    )
+
 
 settings = Settings()

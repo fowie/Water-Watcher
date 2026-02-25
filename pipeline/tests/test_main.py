@@ -107,6 +107,7 @@ class TestSchedulerConfig:
         mock_settings.scrape_interval_minutes = 240
         mock_settings.raft_watch_interval_minutes = 30
         mock_settings.land_agency_interval_minutes = 360
+        mock_settings.facebook_interval_minutes = 360
         mock_scheduler = MagicMock()
         mock_sched_cls.return_value = mock_scheduler
         # main() catches SystemExit, so use KeyboardInterrupt to exit cleanly
@@ -116,7 +117,7 @@ class TestSchedulerConfig:
         main()  # Does not raise — main catches KeyboardInterrupt
 
         calls = mock_scheduler.add_job.call_args_list
-        assert len(calls) == 3
+        assert len(calls) == 4
 
         # First job: river scrapers
         river_call = calls[0]
@@ -132,6 +133,7 @@ class TestSchedulerConfig:
         mock_settings.scrape_interval_minutes = 240
         mock_settings.raft_watch_interval_minutes = 30
         mock_settings.land_agency_interval_minutes = 360
+        mock_settings.facebook_interval_minutes = 360
         mock_scheduler = MagicMock()
         mock_sched_cls.return_value = mock_scheduler
         mock_scheduler.start.side_effect = KeyboardInterrupt()
@@ -153,6 +155,7 @@ class TestSchedulerConfig:
         mock_settings.scrape_interval_minutes = 240
         mock_settings.raft_watch_interval_minutes = 30
         mock_settings.land_agency_interval_minutes = 360
+        mock_settings.facebook_interval_minutes = 360
         mock_scheduler = MagicMock()
         mock_sched_cls.return_value = mock_scheduler
         mock_scheduler.start.side_effect = KeyboardInterrupt()
@@ -165,6 +168,7 @@ class TestSchedulerConfig:
         assert "river_scrapers" in ids
         assert "raft_watch" in ids
         assert "land_agency_scrapers" in ids
+        assert "facebook_scraper" in ids
 
     @patch("main.BlockingScheduler")
     @patch("main._validate_startup")
@@ -176,6 +180,7 @@ class TestSchedulerConfig:
         mock_settings.scrape_interval_minutes = 240
         mock_settings.raft_watch_interval_minutes = 30
         mock_settings.land_agency_interval_minutes = 360
+        mock_settings.facebook_interval_minutes = 360
         mock_scheduler = MagicMock()
         mock_sched_cls.return_value = mock_scheduler
         mock_scheduler.start.side_effect = KeyboardInterrupt()

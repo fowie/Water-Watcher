@@ -12,6 +12,7 @@ from models.models import (
     ScrapeLog,
     NotificationPreference,
     AlertLog,
+    PasswordResetToken,
 )
 
 __all__ = [
@@ -31,4 +32,5 @@ __all__ = [
     "ScrapeLog",
     "NotificationPreference",
     "AlertLog",
+    "PasswordResetToken",
 ]

@@ -386,6 +386,117 @@ async function main() {
   });
   console.log(`  ✓ Deal filter: ${filter.name}`);
 
+  // ─── Trips ───────────────────────────────────────────────
+  const tripStartDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000); // 2 weeks from now
+  const tripEndDate = new Date(now.getTime() + 17 * 24 * 60 * 60 * 1000); // 3-day trip
+
+  const trip = await prisma.trip.upsert({
+    where: { id: "demo-trip" },
+    update: {
+      name: "Gore Canyon Weekend",
+      startDate: tripStartDate,
+      endDate: tripEndDate,
+      status: "planning",
+      notes: "Spring runoff trip — check flows before committing. Backup plan: Browns Canyon.",
+      isPublic: true,
+    },
+    create: {
+      id: "demo-trip",
+      userId: user.id,
+      name: "Gore Canyon Weekend",
+      startDate: tripStartDate,
+      endDate: tripEndDate,
+      status: "planning",
+      notes: "Spring runoff trip — check flows before committing. Backup plan: Browns Canyon.",
+      isPublic: true,
+    },
+  });
+  console.log(`  ✓ Trip: ${trip.name}`);
+
+  // ─── Trip Stops ──────────────────────────────────────────
+  await prisma.tripStop.deleteMany({ where: { tripId: trip.id } });
+
+  const tripStopsData = [
+    {
+      tripId: trip.id,
+      riverId: colorado.id,
+      dayNumber: 1,
+      notes: "Gore Canyon — full day. Scout Appaloosa and Gore Rapid before launching.",
+      putInTime: "09:00",
+      takeOutTime: "16:00",
+      sortOrder: 0,
+    },
+    {
+      tripId: trip.id,
+      riverId: arkansas.id,
+      dayNumber: 2,
+      notes: "Browns Canyon — warm-up day. Stop at Zoom Flume for photos.",
+      putInTime: "10:00",
+      takeOutTime: "14:00",
+      sortOrder: 0,
+    },
+    {
+      tripId: trip.id,
+      riverId: arkansas.id,
+      dayNumber: 3,
+      notes: "Browns Canyon again — try the Seidel's Suckhole line.",
+      putInTime: "09:30",
+      takeOutTime: "13:00",
+      sortOrder: 0,
+    },
+  ];
+
+  await prisma.tripStop.createMany({ data: tripStopsData });
+  console.log(`  ✓ Trip stops: ${tripStopsData.length} stops for "${trip.name}"`);
+
+  // ─── River Reviews ───────────────────────────────────────
+  const reviewsData = [
+    {
+      riverId: colorado.id,
+      userId: user.id,
+      rating: 5,
+      title: "World-class canyon run",
+      body: "Gore Canyon is an incredible experience. The continuous whitewater through the deep canyon is unlike anything else in Colorado. Appaloosa and Gore Rapid are must-scout rapids. Water was around 1,200 CFS — perfect level for a challenging but clean run.",
+      visitDate: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+      difficulty: "Class IV",
+    },
+    {
+      riverId: arkansas.id,
+      userId: user.id,
+      rating: 4,
+      title: "Great family-friendly run",
+      body: "Browns Canyon is Colorado's most popular rafting stretch for good reason. Zoom Flume and Seidel's Suckhole provide real thrills, but the overall difficulty is manageable for intermediate paddlers. Beautiful granite canyon scenery. Go early in the morning to beat the commercial raft traffic.",
+      visitDate: new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000),
+      difficulty: "Class III",
+    },
+    {
+      riverId: salmon.id,
+      userId: user.id,
+      rating: 5,
+      title: "Bucket-list wilderness trip",
+      body: "The River of No Return lives up to its name. 79 miles of pristine wilderness with no road access. Salmon Falls is the highlight — a powerful Class IV drop that demands respect. The hot springs along the way are an incredible bonus. Plan for the permit lottery well in advance.",
+      visitDate: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000),
+      difficulty: "Class III-IV",
+    },
+  ];
+
+  for (const review of reviewsData) {
+    await prisma.riverReview.upsert({
+      where: {
+        riverId_userId: { riverId: review.riverId, userId: review.userId },
+      },
+      update: {
+        rating: review.rating,
+        title: review.title,
+        body: review.body,
+        visitDate: review.visitDate,
+        difficulty: review.difficulty,
+      },
+      create: review,
+    });
+  }
+  console.log(`  ✓ River reviews: ${reviewsData.length} reviews`);
+
   console.log("\n✅ Seed complete!");
 }
 

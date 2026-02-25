@@ -23,6 +23,7 @@ from scrapers.american_whitewater import AmericanWhitewaterScraper
 from scrapers.craigslist import CraigslistScraper
 from scrapers.blm import BLMScraper
 from scrapers.usfs import USFSScraper
+from scrapers.facebook import FacebookScraper
 from processors.condition_processor import ConditionProcessor
 from processors.deal_matcher import DealMatcher
 from notifiers.push_notifier import PushNotifier
@@ -180,6 +181,45 @@ def run_land_agency_scrapers():
             logger.error(f"{scraper.name} failed: {e}", exc_info=True)
 
 
+def run_facebook_scraper():
+    """Run the Facebook scraper for river condition mentions.
+
+    Scrapes public Facebook pages/groups for posts mentioning tracked
+    rivers. Processes through the condition processor with source
+    priority 30 (lowest per BD-002).
+    """
+    logger.info("Starting Facebook scrape cycle")
+    processor = ConditionProcessor()
+    notifier = PushNotifier()
+    email_notifier = EmailNotifier()
+
+    try:
+        scraper = FacebookScraper()
+        logger.info(f"Running {scraper.name}...")
+        raw_data = scraper.scrape()
+        processed = processor.process(raw_data, source=scraper.name)
+        logger.info(f"{scraper.name}: processed {len(processed)} records")
+
+        for record in processed:
+            if record.get("quality_changed"):
+                notifier.notify_condition_change(
+                    river_id=record["river_id"],
+                    river_name=record.get("river_name", "Unknown River"),
+                    old_quality=record["old_quality"],
+                    new_quality=record["new_quality"],
+                )
+                _send_condition_emails(
+                    email_notifier,
+                    river_id=record["river_id"],
+                    river_name=record.get("river_name", "Unknown River"),
+                    old_quality=record["old_quality"],
+                    new_quality=record["new_quality"],
+                    details=record,
+                )
+    except Exception as e:
+        logger.error(f"Facebook scraper failed: {e}", exc_info=True)
+
+
 def _get_email_recipients(session, user_ids: list[str], alert_type: str) -> list[tuple[str, str]]:
     """Get email addresses for users who want email alerts of this type.
 
@@ -299,6 +339,7 @@ def main():
     logger.info(f"River scrape interval: {settings.scrape_interval_minutes}m")
     logger.info(f"Raft Watch interval: {settings.raft_watch_interval_minutes}m")
     logger.info(f"Land agency interval: {settings.land_agency_interval_minutes}m")
+    logger.info(f"Facebook interval: {settings.facebook_interval_minutes}m")
     logger.info("=" * 60)
 
     scheduler = BlockingScheduler()
@@ -330,6 +371,16 @@ def main():
         minutes=settings.land_agency_interval_minutes,
         id="land_agency_scrapers",
         name="Land Agency Scrapers (BLM + USFS)",
+        next_run_time=datetime.now(),
+    )
+
+    # Facebook — every 6 hours by default
+    scheduler.add_job(
+        run_facebook_scraper,
+        "interval",
+        minutes=settings.facebook_interval_minutes,
+        id="facebook_scraper",
+        name="Facebook Scraper",
         next_run_time=datetime.now(),
     )
 

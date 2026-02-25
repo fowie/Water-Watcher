@@ -453,3 +453,49 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 11 cross-agent — from Tyler):** Built command palette search (`SearchPalette`) with Cmd/Ctrl+K trigger, grouped results, arrow-key navigation, recent searches in localStorage. Dedicated `/search` page with type filter tabs and Suspense boundary. Photo gallery (`PhotoGallery`) with lightbox (keyboard nav, scroll lock) and Intersection Observer lazy loading. Photo upload (`PhotoUpload`) with base64 data URL strategy, 5MB client-side limit. River detail tabs expanded to 7 columns (Photos tab with count badge). Scrape monitor dashboard at `/admin/scrapers` with traffic light health indicators (green/yellow/red based on interval multipliers), expandable detail cards with scrape history tables.
 
 **2026-02-24 (Round 11 cross-agent — from Pappas):** 96 new web tests (572→668): search (32), river photos (31), scrapers (33). Grand total 1,347. No bugs found. Observations: search `type=all` silently skips trips for anonymous users, scraper VALID_SOURCES is case-sensitive, photo POST rate limit runs before auth check.
+
+**2026-02-24:** Round 12 — Docker Compose fix, Facebook scraper, password reset/email verification, security headers:
+
+### Docker Compose Fix
+- Root cause: `db-migrate` service used `target: builder` which required building the entire Next.js app (including `pnpm build`) just to run `prisma db push`. The builder stage needs `DATABASE_URL` at build time for Prisma client generation, which wasn't available.
+- Fix: Replaced `db-migrate` with a lightweight `node:20-alpine` image that volume-mounts `web/prisma/` and runs `npx prisma db push --skip-generate` directly — no build step needed.
+- Added `DATABASE_URL` build arg to web Dockerfile builder stage with dummy default so Prisma client generates without a real DB connection.
+- Added missing env vars to docker-compose.yml: `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, `RESEND_API_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_ID`, `GITHUB_SECRET`, `RIDB_API_KEY`, `FACEBOOK_ACCESS_TOKEN`, `LAND_AGENCY_INTERVAL_MINUTES`. All use `${VAR:-}` pattern for optional ones.
+- Made Playwright install optional in pipeline Dockerfile (`|| echo "skipped"`) — non-critical for scraping.
+- `.dockerignore` files already existed for both web/ and pipeline/.
+
+### Facebook Scraper (`pipeline/scrapers/facebook.py`)
+- Extends `BaseScraper`, `name="facebook"`, source priority 30 (per BD-002)
+- Dual strategy: Graph API with access token, or public page scraping via mobile site (no auth)
+- Graph API: fetches page posts with fields (message, created_time, from, full_picture, permalink_url), handles 401/403/429 responses
+- Public scraping: parses mobile site HTML with BeautifulSoup for post text, images, links, author
+- River mention detection: word-boundary regex against all tracked river names from DB, case-insensitive
+- Hashtag support: converts `#ColoradoRiver` → `Colorado River` for matching
+- One ScrapedItem per river mentioned per post (handles multi-river posts)
+- Condition extraction via regex: flow rate (CFS), gauge height (ft), water temp (°F), quality keywords
+- Rate limiting: configurable delay between requests, handles `X-App-Usage` headers, backs off at 50%+ API usage
+- 48-hour scrape window — skips older posts
+- Settings: `facebook_access_token`, `facebook_pages`, `facebook_interval_minutes` added to `config/settings.py`
+- Scheduled job `run_facebook_scraper()` added to `main.py` (every 6 hours default)
+- Updated `scrapers/__init__.py` to export `FacebookScraper`
+- Updated `test_main.py` assertions: 3→4 jobs, facebook_scraper ID check
+
+### Password Reset & Email Verification
+- New Prisma model: `PasswordResetToken` with `email`, `token` (unique), `expires`, `createdAt`. Mapped to `password_reset_tokens` table. Compound unique on `[email, token]`.
+- SQLAlchemy mirror: `PasswordResetToken` model added to `pipeline/models/models.py` and exported from `__init__.py`
+- `POST /api/auth/forgot-password`: public endpoint, takes `email`, generates 32-byte hex token, stores with 1-hour expiry, sends reset email via Resend, always returns 200 (prevents enumeration). Only for credentials users (with passwordHash).
+- `POST /api/auth/reset-password`: public endpoint, takes `token` + `newPassword`, validates token not expired, hashes password with existing PBKDF2 `hashPassword()`, updates user + deletes token in transaction.
+- `GET /api/auth/verify-email?token=...`: validates VerificationToken, sets `emailVerified` timestamp, deletes token, redirects to signin page with success/error messages.
+- `web/src/lib/email.ts`: Resend API utility with `sendPasswordResetEmail()` and `sendVerificationEmail()`. Graceful no-op when `RESEND_API_KEY` not configured (logs warning). Inline HTML templates matching pipeline email style.
+- Zod schemas: `forgotPasswordSchema` (email), `resetPasswordSchema` (token + newPassword min 8 chars)
+- API client: `forgotPassword(email)`, `resetPassword(token, newPassword)` added to `api.ts`
+
+### Security Headers (`web/next.config.ts`)
+- Rewrote as proper TypeScript with `NextConfig` type import
+- `headers()` config returns security headers for all routes `/(.*)`
+- Headers: X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Referrer-Policy: strict-origin-when-cross-origin, X-XSS-Protection: 1; mode=block, Permissions-Policy: camera=(), microphone=(), geolocation=(self), Strict-Transport-Security: max-age=31536000; includeSubDomains
+- `output: "standalone"` preserved for Docker compatibility
+
+### Test Results
+- Web: 668 passed (no regressions)
+- Pipeline: 636 passed, 43 skipped (no regressions)

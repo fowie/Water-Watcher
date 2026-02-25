@@ -132,3 +132,21 @@ export const photoSchema = z.object({
 });
 
 export type PhotoInput = z.infer<typeof photoSchema>;
+
+// ─── Auth: Password Reset ─────────────────────────────────
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must be at most 128 characters"),
+});
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;

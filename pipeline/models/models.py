@@ -333,3 +333,13 @@ class RiverReview(Base):
     __table_args__ = (
         Index("ix_river_reviews_river_created", "river_id", "created_at"),
     )
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(String, primary_key=True)
+    email = Column(String, nullable=False)
+    token = Column(String, unique=True, nullable=False)
+    expires = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=_utc_now)

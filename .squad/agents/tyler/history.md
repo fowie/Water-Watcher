@@ -555,3 +555,89 @@
 **2026-02-24 (Round 11 cross-agent — from Utah):** Built Global Search API (`GET /api/search`) with Prisma `contains` case-insensitive matching across rivers, deals, trips, reviews. Auth-aware: trips scoped to user, silently omitted for anonymous `type=all`, 401 for explicit `type=trips`. Results grouped by type. River Photo Gallery: `RiverPhoto` model, paginated public GET, auth+rate-limited POST (max 20 per user per river), owner-only DELETE. Scrape Monitoring API at `GET /api/admin/scrapers` (per-source 24h stats) and `GET /api/admin/scrapers/:source` (last 50 logs, success rate). Both auth-required. Key files: `web/src/app/api/search/route.ts`, `web/src/app/api/rivers/[id]/photos/route.ts`, `web/src/app/api/admin/scrapers/route.ts`.
 
 **2026-02-24 (Round 11 cross-agent — from Pappas):** 96 new web tests (572→668): search (32), river photos (31), scrapers (33). Grand total 1,347. No bugs found. Observations: search `type=all` silently skips trips for anonymous users, scraper VALID_SOURCES is case-sensitive, photo POST rate limit runs before auth.
+
+**2026-02-24:** Round 12 — Password Reset & Email Verification UI, README Overhaul, PWA Icons & Offline Page, Seed Script Update:
+
+### Password Reset & Email Verification UI
+
+#### Forgot Password Page (`web/src/app/auth/forgot-password/page.tsx`)
+- Email input form with "Send Reset Link" button → calls `POST /api/auth/forgot-password` via `forgotPassword()` from api.ts
+- Success state: green CheckCircle2 icon, "Check your email for a reset link" message
+- Error handling with toast + inline error banner
+- Link back to sign-in (ArrowLeft icon)
+- Same auth layout pattern: full-screen centered card, no navigation chrome
+
+#### Reset Password Page (`web/src/app/auth/reset-password/page.tsx`)
+- Reads `token` from query params via `useSearchParams()` — Suspense boundary wrapping the form component
+- New password + confirm password inputs with Zod validation (min 8 chars, passwords match)
+- Password strength indicator: 5-segment bar scoring length (8+, 12+), uppercase, number, special char
+- Strength labels: Weak (red), Fair (orange), Good (yellow), Strong (green)
+- Inline requirement checklist (✓/✗ for 8+ chars, uppercase, number)
+- "Reset Password" button → calls `POST /api/auth/reset-password` via `resetPassword()` from api.ts
+- Success → redirect to sign-in with toast "Password reset successfully"
+- Invalid/expired token → error message with "Request a New Link" button linking to `/auth/forgot-password`
+- Missing token → immediate error state (no form shown)
+
+#### Email Verification Page (`web/src/app/auth/verify-email/page.tsx`)
+- Reads `token` from query params via `useSearchParams()` — Suspense boundary
+- Auto-calls `GET /api/auth/verify-email?token=xxx` on mount via `useEffect` + `useCallback`
+- Three states: loading (Loader2 spinner), success (CheckCircle2), error (AlertCircle)
+- Success: "Email Verified!" message → auto-redirect to sign-in after 3 seconds
+- Error: "Verification Failed" with "Go to Sign In" button
+- Fallback link "Click here if you're not redirected"
+
+#### Sign-In Page Update (`web/src/app/auth/signin/page.tsx`)
+- Added "Forgot password?" link between the password Label and Input — uses flex `justify-between` layout
+- Links to `/auth/forgot-password`
+
+### Comprehensive README Update (`README.md`)
+- Complete rewrite reflecting all features from Rounds 1–12
+- Hero section with app name, tagline, and badges (license, test count, TypeScript, Python, Next.js)
+- Features organized into 13 categories with emoji headers: River Tracking, Interactive Map, Weather, Trip Planning, Real-Time Updates, Gear Deals, Social, Search, Notifications, Authentication, Data Export, PWA, Admin
+- Tech stack table expanded to 17 rows including Auth, Maps, Weather, Email, Real-Time, CI
+- Quick Start with Docker (primary) and Local Dev (secondary) instructions
+- ASCII architecture diagram showing 4-layer flow: Data Sources → Pipeline → PostgreSQL → Next.js
+- Complete API reference table with 37 endpoints including auth status (Yes/No/Partial)
+- Testing section with total count (1,304) and commands for both web and pipeline
+- Updated project structure tree reflecting all directories and key files
+- Environment variables table with 22 entries, required/optional status, and defaults
+- Contributing guide and MIT license
+
+### PWA Icons & Offline Page
+
+#### SVG Icons
+- `web/public/icons/icon-192x192.svg` — Water drop + mountain design on sky-blue circular background; uses SVG linear gradients for sky, mountain, snow cap, and water drop
+- `web/public/icons/icon-512x512.svg` — Same design at 512px viewport; identical visual with scaled coordinates
+- Both are SVG so they scale perfectly to any resolution
+
+#### Manifest Update (`web/public/manifest.json`)
+- Updated icon paths from `/icon-192.png` and `/icon-512.png` to `/icons/icon-192x192.svg` and `/icons/icon-512x512.svg`
+- Changed `type` from `image/png` to `image/svg+xml`
+
+#### Offline Page (`web/public/offline.html`)
+- Static HTML with inline CSS (no external dependencies needed offline)
+- Dark theme (#0f172a background) matching app design
+- Water-Watcher wave brand icon + "You're Offline" heading
+- Message: "Check your internet connection and try again"
+- "Try Again" button calls `window.location.reload()`
+- Decorative wave SVG at page bottom
+- WiFi-off icon as main visual
+
+#### Service Worker Update (`web/public/sw.js`)
+- Added `/offline.html` to `PRECACHE_ASSETS` array — cached during install event
+- Updated icon paths in PRECACHE_ASSETS to match new `/icons/` directory
+- Updated push notification icon references from `/icon-192.png` to `/icons/icon-192x192.svg`
+- Existing navigation fetch handler already returns `offline.html` for failed navigation requests via `caches.match(OFFLINE_URL)`
+
+### Seed Script Update (`web/prisma/seed.ts`)
+- Added sample Trip: "Gore Canyon Weekend" — 3-day planning status trip, public, starting 2 weeks from seed time
+- Added 3 TripStops: Day 1 Gore Canyon, Day 2 Browns Canyon, Day 3 Browns Canyon (with notes, put-in/take-out times)
+- Added 3 RiverReviews: 5-star Gore Canyon ("World-class canyon run"), 4-star Browns Canyon ("Great family-friendly run"), 5-star Main Salmon ("Bucket-list wilderness trip")
+- Trip uses upsert pattern with stable `id: "demo-trip"` for idempotent re-runs
+- TripStops use deleteMany + createMany pattern (consistent with hazards/campsites/rapids)
+- Reviews use upsert on `riverId_userId` unique constraint (consistent with Prisma model's `@@unique`)
+- All new seed data references existing demo user and demo rivers
+
+### Build
+- `npx next build` passes cleanly — all new auth routes compile as static pages
+- No TypeScript errors

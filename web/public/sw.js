@@ -11,9 +11,10 @@ const OFFLINE_URL = "/offline.html";
 // Static assets to pre-cache on install
 const PRECACHE_ASSETS = [
   "/",
+  "/offline.html",
   "/manifest.json",
-  "/icon-192.png",
-  "/icon-512.png",
+  "/icons/icon-192x192.svg",
+  "/icons/icon-512x512.svg",
 ];
 
 // ─── Install ──────────────────────────────────────────────
@@ -165,8 +166,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "Water Watcher";
   const options = {
     body: data.body || "",
-    icon: "/icon-192.png",
-    badge: "/badge-72.png",
+    icon: "/icons/icon-192x192.svg",
+    badge: "/icons/icon-192x192.svg",
     tag: data.tag || "water-watcher",
     data: {
       url: data.url || "/",

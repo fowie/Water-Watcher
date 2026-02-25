@@ -17,23 +17,26 @@ services:
       retries: 5
 
   db-migrate:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-      target: builder
+    image: node:20-alpine
     container_name: waterwatcher-migrate
+    working_dir: /app
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher}
-    command: npx prisma db push --skip-generate
+    volumes:
+      - ./web/prisma:/app/prisma
+      - ./web/package.json:/app/package.json
+    command: sh -c "npx prisma db push --skip-generate"
     restart: "no"
 
   web:
     build:
       context: ./web
       dockerfile: Dockerfile
+      args:
+        DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
     container_name: waterwatcher-web
     depends_on:
       db-migrate:
@@ -43,9 +46,16 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://waterwatcher:waterwatcher@postgres:5432/waterwatcher}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-in-production}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:you@example.com}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_ID: ${GITHUB_ID:-}
+      GITHUB_SECRET: ${GITHUB_SECRET:-}
     restart: unless-stopped
 
   pipeline:
@@ -64,6 +74,10 @@ services:
       SCRAPE_INTERVAL_MINUTES: ${SCRAPE_INTERVAL_MINUTES:-60}
       RAFT_WATCH_INTERVAL_MINUTES: ${RAFT_WATCH_INTERVAL_MINUTES:-15}
       CRAIGSLIST_REGIONS: ${CRAIGSLIST_REGIONS:-seattle,portland,denver,saltlakecity,boise}
+      RIDB_API_KEY: ${RIDB_API_KEY:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      FACEBOOK_ACCESS_TOKEN: ${FACEBOOK_ACCESS_TOKEN:-}
+      LAND_AGENCY_INTERVAL_MINUTES: ${LAND_AGENCY_INTERVAL_MINUTES:-360}
     restart: unless-stopped
 
 volumes:
