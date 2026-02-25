@@ -33,3 +33,4 @@ export { UserMenuDesktop, UserMenuMobile } from "./user-menu";
 export { AuthGuard } from "./auth-guard";
 export { SessionProvider } from "./session-provider";
 export { Navigation } from "./navigation";
+export { WeatherWidget } from "./weather-widget";

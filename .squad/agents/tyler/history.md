@@ -344,3 +344,54 @@
 **2026-02-24 (Round 8 cross-agent — from Pappas):** 116 new tests: email notifier (70), notification prefs (22), alerts (24). Pipeline 636+43skip, Web 387, total 1023+43. Found `limit=0` treated as falsy in alerts route.
 
 **2026-02-24 (Round 8 cross-agent — from Coordinator):** Fixed alerts API `limit=0` edge case — `Number.isFinite` instead of `||` fallback.
+
+**2026-02-24:** Round 9 — Interactive Map, Weather Widget, Data Export UI:
+
+### Interactive Map Page (`web/src/app/map/page.tsx`)
+- Full-page map view using vanilla Leaflet (dynamically imported via `import()` to avoid SSR `window` issues)
+- `useRef` + `useEffect` pattern for Leaflet initialization — no react-leaflet dependency (avoids App Router SSR conflicts)
+- Color-coded markers by condition quality: green (excellent/good), yellow (fair), orange (poor), red (dangerous), gray (unknown)
+- Click marker → popup card with river name, state, quality badge, difficulty, flow rate, and "View Details" link
+- Desktop: right sidebar (320px) listing all rivers with search filter, click to zoom + open popup
+- Mobile: bottom sheet with drag handle, collapse/expand toggle, same filtered river list
+- Search box filters rivers by name, state, or difficulty
+- "Locate me" button using browser Geolocation API
+- Legend card showing condition color codes
+- Leaflet CSS loaded from CDN (`unpkg.com/leaflet@1.9.4`)
+- Added `MapIcon` (as `Map`) + `Download` to lucide imports in navigation
+- Added "Map" to `publicNavItems` in `navigation.tsx`
+- Layout + loading.tsx created for the route
+
+### Weather Widget (`web/src/components/weather-widget.tsx`)
+- Takes `latitude` and `longitude` props
+- Fetches from Open-Meteo API (free, no API key needed)
+- Displays current: temperature (°F), weather description, wind speed (mph), precipitation (mm)
+- 3-day forecast as small cards with weather icons, high/low temps, precipitation
+- Weather code → lucide-react icon mapping (Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, CloudFog)
+- Celsius → Fahrenheit and km/h → mph conversions
+- Loading skeleton while fetching
+- Graceful fallback: "No location data" with MapPin icon when river has no lat/lng
+- Error fallback: "Weather data unavailable" message
+- Added as a new "Weather" tab (CloudSun icon) in the river detail page tabs (grid-cols-4 → grid-cols-5)
+- Exported from `web/src/components/index.ts`
+
+### Data Export Page (`web/src/app/export/page.tsx`)
+- Protected by `AuthGuard`
+- Format selector: JSON (FileJson icon), CSV (FileSpreadsheet icon), GPX (Map icon) — card-based radio buttons with descriptions
+- Type selector: Rivers, Conditions, Deals, All — card-based radio buttons
+- GPX auto-disabled (grayed out with info message) when type is not "Rivers"; auto-switches to JSON if user changes type away from Rivers while GPX selected
+- Estimated record count shown based on API totals (~20 conditions per river estimate)
+- Export button calls `GET /api/export?format={f}&type={t}` and triggers browser file download with timestamped filename
+- Toast notifications on success/error
+- Added `exportData(format, type)` to `web/src/lib/api.ts`
+- Added "Export" to `authNavItems` in navigation (Download icon, only visible when authenticated)
+- Layout + loading.tsx created for the route
+
+### Navigation Updates (`web/src/components/navigation.tsx`)
+- `publicNavItems`: added Map (MapIcon, `/map`)
+- `authNavItems`: added Export (Download icon, `/export`) between Alerts and Settings
+- Both appear in desktop sidebar, mobile sheet, and bottom tab bar
+
+### Dependencies
+- Installed `leaflet` + `@types/leaflet` via npm
+- No react-leaflet — using vanilla Leaflet with refs to avoid Next.js App Router SSR issues

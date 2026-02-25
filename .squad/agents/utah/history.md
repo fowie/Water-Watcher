@@ -286,3 +286,63 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 8 cross-agent — from Pappas):** 116 new tests: `test_email_notifier.py` (70), `notification-prefs.test.ts` (22), `alerts.test.ts` (24). Pipeline 636+43skip, Web 387, total 1023+43. Found `limit=0` falsy edge case in alerts route — fixed by Coordinator.
 
 **2026-02-24 (Round 8 cross-agent — from Coordinator):** Fixed alerts API `limit=0` edge case: `parseInt(param) || 20` treats 0 as falsy. Changed to `Number.isFinite(parsed) ? parsed : 20`.
+
+**2026-02-24:** Round 9 — SSE endpoint, PWA manifest & offline caching, data export API:
+
+### Server-Sent Events (`web/src/app/api/sse/rivers/route.ts`)
+- GET endpoint returning `ReadableStream` with `text/event-stream` content type
+- On connection, sends initial snapshot of recently updated rivers/hazards/deals from the last 1 hour
+- Polls database every 30 seconds for new conditions, hazards, and deal matches
+- Three event types: `condition-update`, `hazard-alert`, `deal-match`
+- Includes `retry: 5000` for auto-reconnect, `X-Accel-Buffering: no` for Nginx compatibility
+- Cleanup on connection close via `closed` flag + `clearInterval`
+
+### SSE Client Library (`web/src/lib/sse.ts`)
+- `createSSEClient(url, handlers)` — factory that creates an EventSource with typed event handlers for each event type, returns cleanup function
+- `useRiverSSE({ riverId?, enabled? })` — React hook that subscribes to SSE, returns live `conditions`, `hazards`, `deals` arrays plus `isConnected` and `error` state
+- Auto-reconnect with exponential backoff: 1s → 2s → 4s → … → 30s max
+- Optional `riverId` filter to scope condition/hazard events to a single river
+- Arrays capped at 100 conditions, 50 hazards, 50 deals to prevent memory bloat
+
+### PWA Manifest (`web/public/manifest.json`)
+- name: "Water Watcher", short_name: "WaterWatch", display: standalone
+- theme_color: #0ea5e9 (sky-500), background_color: #0f172a (slate-900)
+- Icons: 192x192 and 512x512 placeholder references
+- Categories: sports, weather, navigation
+
+### Layout Updates (`web/src/app/layout.tsx`)
+- Added `<link rel="manifest">`, `<meta name="theme-color">`, `<meta name="apple-mobile-web-app-capable">`, viewport with `viewport-fit=cover`
+
+### Service Worker Updates (`web/public/sw.js`)
+- Added `CACHE_VERSION = "ww-cache-v1"` with separate static and API caches
+- Cache-first strategy for static assets (CSS, JS, fonts, images, `/_next/static/`)
+- Network-first strategy for API calls with cache fallback
+- Navigation requests: network-first with offline fallback
+- Pre-caches `/`, `/manifest.json`, icon files on install
+- Old caches cleaned up on activate
+- `self.skipWaiting()` on install for immediate activation
+- SSE connections (`/api/sse/`) excluded from caching
+- Preserved all existing push notification handlers (push, notificationclick)
+
+### Data Export API (`web/src/app/api/export/route.ts`)
+- GET endpoint, auth-protected with `withAuth()`
+- Zod validation for query params: `format` (json|csv|gpx), `type` (rivers|conditions|deals|all)
+- JSON: structured data with proper `Content-Disposition: attachment` header
+- CSV: proper header rows, `csvEscape()` handles commas/quotes/newlines with RFC 4180 quoting
+- GPX: valid GPX 1.1 XML with waypoints for rivers that have lat/lng, `gpxEscape()` for XML entities
+- Exports user's tracked rivers, conditions (last 30 days), and matched deals
+- GPX only valid for `rivers` or `all` types (returns 400 otherwise)
+
+### Bug Fix
+- Fixed stale test in `alerts.test.ts`: test expected `limit=0` → 20 (old behavior), but BD-021 fix changed it to `limit=0` → 1 (correct behavior via `Number.isFinite` + `Math.max`). Updated assertion to expect 1.
+
+### Test Results
+- Web: 387 passed (stale test fixed, no new failures)
+- Pipeline: 636 passed, 43 skipped (unchanged)
+
+### Key File Paths
+- `web/src/app/api/sse/rivers/route.ts` — SSE endpoint
+- `web/src/lib/sse.ts` — SSE client + React hook
+- `web/public/manifest.json` — PWA manifest
+- `web/public/sw.js` — Service worker with caching
+- `web/src/app/api/export/route.ts` — Data export API

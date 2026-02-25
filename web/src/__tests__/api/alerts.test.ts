@@ -251,16 +251,16 @@ describe("GET /api/alerts", () => {
     );
   });
 
-  it("clamps limit=0 to default (0 is falsy → fallback 20)", async () => {
+  it("clamps limit=0 to 1 (minimum clamp)", async () => {
     mockPrisma.alertLog.findMany.mockResolvedValue([]);
     mockPrisma.alertLog.count.mockResolvedValue(0);
 
-    // parseInt("0") is 0 which is falsy, so || 20 kicks in → 20
+    // parseInt("0") is 0, Number.isFinite(0) is true, Math.max(0, 1) = 1
     const req = mockRequest("http://localhost:3000/api/alerts?limit=0");
     const res = await GET(req);
     const data = await res.json();
 
-    expect(data.limit).toBe(20);
+    expect(data.limit).toBe(1);
   });
 
   it("clamps negative limit to 1", async () => {

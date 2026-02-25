@@ -279,6 +279,20 @@ export async function getAlerts(params?: {
   return fetcher<AlertsResponse>(`/api/alerts${q ? `?${q}` : ""}`);
 }
 
+// ─── Data Export ────────────────────────────────────────
+
+export async function exportData(
+  format: "json" | "csv" | "gpx",
+  type: "rivers" | "conditions" | "deals" | "all"
+): Promise<Blob> {
+  const res = await fetch(`${BASE}/api/export?format=${format}&type=${type}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Export failed: ${res.status}`);
+  }
+  return res.blob();
+}
+
 // ─── Helpers ────────────────────────────────────────────
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

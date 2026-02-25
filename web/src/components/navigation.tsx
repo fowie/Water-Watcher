@@ -16,6 +16,8 @@ import {
   Settings,
   Star,
   Bell,
+  MapIcon,
+  Download,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenuDesktop, UserMenuMobile } from "@/components/user-menu";
@@ -25,11 +27,13 @@ const publicNavItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/rivers", label: "Rivers", icon: Mountain },
   { href: "/deals", label: "Raft Watch", icon: ShoppingBag },
+  { href: "/map", label: "Map", icon: MapIcon },
 ];
 
 const authNavItems = [
   { href: "/rivers/favorites", label: "My Rivers", icon: Star },
   { href: "/alerts", label: "Alerts", icon: Bell },
+  { href: "/export", label: "Export", icon: Download },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

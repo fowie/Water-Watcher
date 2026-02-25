@@ -13,6 +13,7 @@ import { EditRiverDialog } from "@/components/edit-river-dialog";
 import { MapLink } from "@/components/map-link";
 import { Button } from "@/components/ui/button";
 import { FlowTrend } from "@/components/flow-trend";
+import { WeatherWidget } from "@/components/weather-widget";
 import { getRiver } from "@/lib/api";
 import { formatFlowRate, timeAgo } from "@/lib/utils";
 import {
@@ -29,6 +30,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  CloudSun,
 } from "lucide-react";
 import Link from "next/link";
 import type { RiverDetail, ConditionRecord, HazardRecord, CampsiteRecord, RapidRecord } from "@/types";
@@ -166,10 +168,14 @@ export default function RiverDetailPage() {
 
       {/* Tabbed content */}
       <Tabs defaultValue="conditions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="conditions">
             <Droplets className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
             Conditions
+          </TabsTrigger>
+          <TabsTrigger value="weather">
+            <CloudSun className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
+            Weather
           </TabsTrigger>
           <TabsTrigger value="hazards">
             <AlertTriangle className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
@@ -187,6 +193,9 @@ export default function RiverDetailPage() {
 
         <TabsContent value="conditions">
           <ConditionsTab conditions={river.conditions ?? []} />
+        </TabsContent>
+        <TabsContent value="weather">
+          <WeatherWidget latitude={river.latitude} longitude={river.longitude} />
         </TabsContent>
         <TabsContent value="hazards">
           <HazardsTab hazards={river.hazards ?? []} />
