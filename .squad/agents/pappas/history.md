@@ -81,3 +81,12 @@
 **2026-02-24 (Round 5 cross-agent — from Tyler):** Error boundaries and loading skeletons (global + per-route), difficulty filter chips and sort dropdown on rivers page, Open Graph metadata, emoji favicon.
 
 **2026-02-24 (Round 5 cross-agent — from Coordinator):** Fixed all 3 bugs found this round: USGS broad error handling, _find_river name-based fallback, runnability inclusive upper bound. Updated 4 tests.
+
+**2026-02-24:** Round 6 — Auth system tests + pipeline scraper stubs.
+- Created `auth-register.test.ts` (23 tests): registration happy path, 409 duplicate email, 400 validation (missing fields, invalid email, short password, empty password), long inputs, select clause verification, error handling (DB failure, hash failure, no info leaks).
+- Created `auth-utils.test.ts` (23 tests): hashPassword format/hex/salt-uniqueness/edge-cases, verifyPassword correct/wrong/similar/empty/malformed/unicode, getCurrentUser with/without session, requireAuth 401 throw with JSON content-type.
+- Created `api-middleware.test.ts` (15 tests): withAuth returns 401 for null session / no user / no id / empty id, passes through with x-user-id header, preserves URL/method/headers/body, passes context, returns handler response, doesn't mutate original request, handles async handlers.
+- Created `test_blm_scraper.py` (42 skipped tests): init, URL construction, response parsing, rate limiting, error handling, data normalization — all `@pytest.mark.skip` stubs.
+- Created `test_facebook_scraper.py` (38 skipped tests): init, auth token handling, post parsing, date extraction, river mention detection, rate limiting, error handling — all `@pytest.mark.skip` stubs.
+- Observations: `withAuth` clones the Request and injects `x-user-id` — tests confirm original request is unmodified. Registration route uses Zod's `.safeParse()` so validation errors return `{ error, details }` shape. PBKDF2 with 16-byte random salt produces 32-char hex salt + 128-char hex hash.
+- Final counts: **web 300 tests** (was 236), **pipeline 407 passed + 80 skipped = 487 total** (was 407).

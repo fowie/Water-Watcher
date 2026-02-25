@@ -2,9 +2,9 @@
  * Tests for the Deal Filters API route handler.
  *
  * Tests:
- * - GET /api/deals/filters (requires userId)
+ * - GET /api/deals/filters (requires auth)
  * - POST /api/deals/filters (create with validation)
- * - Edge cases: missing userId, invalid filter data
+ * - Edge cases: unauthenticated, invalid filter data
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -19,8 +19,14 @@ const mockPrisma = vi.hoisted(() => ({
   },
 }));
 
+const mockAuth = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/db", () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock("@/lib/auth", () => ({
+  auth: mockAuth,
 }));
 
 import { GET, POST } from "@/app/api/deals/filters/route";
@@ -32,9 +38,10 @@ function mockRequest(url: string, options: RequestInit = {}): Request {
 describe("GET /api/deals/filters", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue({ user: { id: "user-1", email: "test@example.com" } });
   });
 
-  it("returns filters for a user", async () => {
+  it("returns filters for the authenticated user", async () => {
     const mockFilters = [
       {
         id: "f1",
@@ -45,9 +52,7 @@ describe("GET /api/deals/filters", () => {
     ];
     mockPrisma.dealFilter.findMany.mockResolvedValue(mockFilters);
 
-    const req = mockRequest(
-      "http://localhost:3000/api/deals/filters?userId=user-1"
-    );
+    const req = mockRequest("http://localhost:3000/api/deals/filters");
     const res = await GET(req);
     const data = await res.json();
 
@@ -55,21 +60,21 @@ describe("GET /api/deals/filters", () => {
     expect(data).toHaveLength(1);
   });
 
-  it("returns 400 when userId is missing", async () => {
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValue(null);
+
     const req = mockRequest("http://localhost:3000/api/deals/filters");
     const res = await GET(req);
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const data = await res.json();
-    expect(data.error).toBe("userId is required");
+    expect(data.error).toBe("Authentication required");
   });
 
   it("returns empty array when user has no filters", async () => {
     mockPrisma.dealFilter.findMany.mockResolvedValue([]);
 
-    const req = mockRequest(
-      "http://localhost:3000/api/deals/filters?userId=user-no-filters"
-    );
+    const req = mockRequest("http://localhost:3000/api/deals/filters");
     const res = await GET(req);
     const data = await res.json();
 
@@ -80,6 +85,7 @@ describe("GET /api/deals/filters", () => {
 describe("POST /api/deals/filters", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue({ user: { id: "user-1", email: "test@example.com" } });
   });
 
   it("creates a filter with valid input", async () => {
@@ -93,14 +99,12 @@ describe("POST /api/deals/filters", () => {
       regions: ["seattle"],
       isActive: true,
     };
-    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
     mockPrisma.dealFilter.create.mockResolvedValue(expected);
 
     const req = mockRequest("http://localhost:3000/api/deals/filters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: "user-1",
         name: "PNW Rafts",
         keywords: ["raft", "nrs"],
         categories: ["raft"],
@@ -115,7 +119,9 @@ describe("POST /api/deals/filters", () => {
     expect(data.name).toBe("PNW Rafts");
   });
 
-  it("returns 400 when userId is missing", async () => {
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValue(null);
+
     const req = mockRequest("http://localhost:3000/api/deals/filters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -126,19 +132,16 @@ describe("POST /api/deals/filters", () => {
     });
     const res = await POST(req);
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const data = await res.json();
-    expect(data.error).toBe("userId is required");
+    expect(data.error).toBe("Authentication required");
   });
 
   it("returns 400 for missing filter name", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
-
     const req = mockRequest("http://localhost:3000/api/deals/filters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: "user-1",
         keywords: ["raft"],
       }),
     });
@@ -150,13 +153,10 @@ describe("POST /api/deals/filters", () => {
   });
 
   it("returns 400 for empty keywords", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
-
     const req = mockRequest("http://localhost:3000/api/deals/filters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: "user-1",
         name: "Empty filter",
         keywords: [],
       }),
@@ -167,13 +167,10 @@ describe("POST /api/deals/filters", () => {
   });
 
   it("returns 400 for negative maxPrice", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
-
     const req = mockRequest("http://localhost:3000/api/deals/filters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: "user-1",
         name: "Bad price",
         keywords: ["raft"],
         maxPrice: -100,
@@ -182,26 +179,6 @@ describe("POST /api/deals/filters", () => {
     const res = await POST(req);
 
     expect(res.status).toBe(400);
-  });
-
-  it("returns 404 for non-existent user", async () => {
-    mockPrisma.user.findUnique.mockResolvedValue(null);
-
-    const req = mockRequest("http://localhost:3000/api/deals/filters", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: "ghost-user-999",
-        name: "Phantom filter",
-        keywords: ["kayak"],
-      }),
-    });
-    const res = await POST(req);
-    const data = await res.json();
-
-    expect(res.status).toBe(404);
-    expect(data.error).toBe("User not found");
-    expect(mockPrisma.dealFilter.create).not.toHaveBeenCalled();
   });
 
   it("accepts keywords with special characters", async () => {
@@ -215,14 +192,12 @@ describe("POST /api/deals/filters", () => {
       regions: [],
       isActive: true,
     };
-    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
     mockPrisma.dealFilter.create.mockResolvedValue(expected);
 
     const req = mockRequest("http://localhost:3000/api/deals/filters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: "user-1",
         name: "Special chars",
         keywords: specialKeywords,
       }),
@@ -245,14 +220,12 @@ describe("POST /api/deals/filters", () => {
       regions: [],
       isActive: true,
     };
-    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
     mockPrisma.dealFilter.create.mockResolvedValue(expected);
 
     const req = mockRequest("http://localhost:3000/api/deals/filters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: "user-1",
         name: "Unicode filter",
         keywords: unicodeKeywords,
       }),

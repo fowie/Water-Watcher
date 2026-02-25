@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { dealFilterUpdateSchema } from "@/lib/validations";
 import { apiError, handleApiError } from "@/lib/api-errors";
+import { withAuth } from "@/lib/api-middleware";
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withAuth(async (
+  request: Request,
+  context?: unknown
+) => {
   try {
-    const { id } = await params;
+    const { id } = await (context as { params: Promise<{ id: string }> }).params;
+    const userId = request.headers.get("x-user-id")!;
 
     const filter = await prisma.dealFilter.findUnique({
       where: { id },
@@ -21,18 +23,24 @@ export async function GET(
       return apiError(404, "Deal filter not found");
     }
 
+    // Only the owner can view their filter
+    if (filter.userId !== userId) {
+      return apiError(403, "Not authorized to view this filter");
+    }
+
     return NextResponse.json(filter);
   } catch (error) {
     return handleApiError(error);
   }
-}
+});
 
-export async function PATCH(
+export const PATCH = withAuth(async (
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  context?: unknown
+) => {
   try {
-    const { id } = await params;
+    const { id } = await (context as { params: Promise<{ id: string }> }).params;
+    const userId = request.headers.get("x-user-id")!;
     const body = await request.json();
 
     // Validate the update payload
@@ -50,11 +58,7 @@ export async function PATCH(
       return apiError(404, "Deal filter not found");
     }
 
-    // Ownership check: userId must be provided and must match the filter owner
-    const userId = body.userId;
-    if (!userId) {
-      return apiError(400, "userId is required");
-    }
+    // Ownership check: session user must match the filter owner
     if (existing.userId !== userId) {
       return apiError(403, "Not authorized to update this filter");
     }
@@ -68,18 +72,24 @@ export async function PATCH(
   } catch (error) {
     return handleApiError(error);
   }
-}
+});
 
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (
+  request: Request,
+  context?: unknown
+) => {
   try {
-    const { id } = await params;
+    const { id } = await (context as { params: Promise<{ id: string }> }).params;
+    const userId = request.headers.get("x-user-id")!;
 
     const existing = await prisma.dealFilter.findUnique({ where: { id } });
     if (!existing) {
       return apiError(404, "Deal filter not found");
+    }
+
+    // Ownership check
+    if (existing.userId !== userId) {
+      return apiError(403, "Not authorized to delete this filter");
     }
 
     await prisma.dealFilter.delete({ where: { id } });
@@ -88,4 +98,4 @@ export async function DELETE(
   } catch (error) {
     return handleApiError(error);
   }
-}
+});

@@ -2,9 +2,11 @@
  * Tests for the Rivers API route handlers.
  *
  * Mocks Prisma client and tests:
- * - GET /api/rivers (list with search/filter)
- * - POST /api/rivers (create with validation)
- * - GET /api/rivers/:id (detail with 404)
+ * - GET /api/rivers (list with search/filter — public)
+ * - POST /api/rivers (create with validation — requires auth)
+ * - GET /api/rivers/:id (detail with 404 — public)
+ * - PATCH /api/rivers/:id (update — requires auth)
+ * - DELETE /api/rivers/:id (delete — requires auth)
  * - Edge cases: empty DB, invalid input, missing fields
  */
 
@@ -23,8 +25,14 @@ const mockPrisma = vi.hoisted(() => ({
   },
 }));
 
+const mockAuth = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/db", () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock("@/lib/auth", () => ({
+  auth: mockAuth,
 }));
 
 import { GET, POST } from "@/app/api/rivers/route";
@@ -136,6 +144,7 @@ describe("GET /api/rivers", () => {
 describe("POST /api/rivers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue({ user: { id: "user-1", email: "test@example.com" } });
   });
 
   it("creates a river with valid input", async () => {
@@ -476,6 +485,7 @@ describe("GET /api/rivers — edge cases", () => {
 describe("DELETE /api/rivers/:id", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue({ user: { id: "user-1", email: "test@example.com" } });
   });
 
   it("deletes a river and returns 204", async () => {
@@ -517,6 +527,7 @@ describe("DELETE /api/rivers/:id", () => {
 describe("PATCH /api/rivers/:id", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue({ user: { id: "user-1", email: "test@example.com" } });
   });
 
   it("updates a river with valid partial data", async () => {

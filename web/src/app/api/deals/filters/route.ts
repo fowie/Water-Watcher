@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { dealFilterSchema } from "@/lib/validations";
-import { apiError, handleApiError } from "@/lib/api-errors";
+import { handleApiError } from "@/lib/api-errors";
+import { withAuth } from "@/lib/api-middleware";
 
-export async function GET(request: Request) {
+export const GET = withAuth(async (request: Request) => {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return apiError(400, "userId is required");
-    }
+    const userId = request.headers.get("x-user-id")!;
 
     const filters = await prisma.dealFilter.findMany({
       where: { userId },
@@ -24,24 +20,14 @@ export async function GET(request: Request) {
   } catch (error) {
     return handleApiError(error);
   }
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (request: Request) => {
   try {
+    const userId = request.headers.get("x-user-id")!;
     const body = await request.json();
-    const { userId, ...filterData } = body;
 
-    if (!userId) {
-      return apiError(400, "userId is required");
-    }
-
-    // Verify user exists
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return apiError(404, "User not found");
-    }
-
-    const parsed = dealFilterSchema.safeParse(filterData);
+    const parsed = dealFilterSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid input", details: parsed.error.flatten() },
@@ -60,4 +46,4 @@ export async function POST(request: Request) {
   } catch (error) {
     return handleApiError(error);
   }
-}
+});

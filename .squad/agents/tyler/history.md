@@ -195,3 +195,29 @@
 **2026-02-24 (Round 5 cross-agent — from Pappas):** 166 new tests (pipeline 278→407, web 199→236, total 643). Found 3 bugs in pipeline; all fixed by Coordinator.
 
 **2026-02-24 (Round 5 cross-agent — from Coordinator):** Fixed USGS error handling, _find_river name fallback, classify_runnability inclusive bound. Updated 4 tests.
+
+**2026-02-24:** Auth UI implementation — sign-in, registration, user menu, protected routes:
+
+### Auth Pages
+- `web/src/app/auth/signin/page.tsx` — Centered card layout with Water-Watcher branding, email + password fields, error display, link to register. Uses `signIn("credentials", { redirect: false })` from `next-auth/react` and checks result for errors before redirecting.
+- `web/src/app/auth/register/page.tsx` — Name + email + password + confirm password with Zod validation (`registerFormSchema`). Calls POST `/api/auth/register`, then auto-signs-in on success. Per-field error display + server error banner.
+- `web/src/app/auth/layout.tsx` — Metadata layout for auth pages (title: "Authentication").
+
+### Session & Auth Components
+- `web/src/components/session-provider.tsx` — Client component wrapper for NextAuth `SessionProvider`, added to root `layout.tsx` wrapping the entire app.
+- `web/src/components/user-menu.tsx` — Two exports: `UserMenuDesktop` (sidebar bottom, dropdown with Settings/Sign Out) and `UserMenuMobile` (compact avatar in top header). Uses `useSession()` for auth state. Shows "Sign In" button when unauthenticated.
+- `web/src/components/auth-guard.tsx` — `AuthGuard` client component. Shows skeleton loading state, redirects to `/auth/signin?callbackUrl=...` when unauthenticated. Wraps protected pages.
+
+### Navigation Updates (`web/src/components/navigation.tsx`)
+- Split nav items into `publicNavItems` (Home, Rivers, Deals) and `authNavItems` (Settings). Settings only shown when authenticated via `useSession()`.
+- Desktop sidebar: User menu positioned between nav links and footer tagline.
+- Mobile header: User avatar/sign-in button added next to theme toggle.
+
+### Protected Routes
+- Settings page wrapped in `AuthGuard` — redirects to sign-in if not logged in.
+- Replaced `DEMO_USER_ID` with `session.user.id` from `useSession()` in settings page.
+
+### Architecture Decisions
+- Updated `auth.ts` pages config: `signIn: "/auth/signin"` (was "/login").
+- Auth pages use full-screen centered layout (no navigation chrome) for clean sign-in/register UX.
+- `AuthGuard` uses client-side redirect pattern (not middleware) — simpler, works with SessionProvider, shows loading skeleton during check.

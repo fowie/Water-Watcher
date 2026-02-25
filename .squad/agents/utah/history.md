@@ -161,3 +161,31 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 5 cross-agent — from Pappas):** 166 new tests (pipeline 278→407, web 199→236). Found 3 bugs: USGS non-numeric crash, _find_river drops non-usgs/aw sources, classify_runnability(inf)=None. All fixed by Coordinator.
 
 **2026-02-24 (Round 5 cross-agent — from Coordinator):** Fixed USGS error handling (broad try/except), _find_river name-based fallback, runnability inclusive upper bound. Updated 4 tests.
+
+**2026-02-24:** Implemented NextAuth.js v5 authentication system. Key decisions:
+
+### Auth Architecture
+- NextAuth v5 (Auth.js) with Credentials provider and JWT session strategy
+- Prisma adapter (`@auth/prisma-adapter`) for future OAuth provider support
+- Password hashing via Node.js built-in `crypto.pbkdf2Sync` (100K iterations, SHA-512, 64-byte key) — no native module dependencies
+- Constant-time password comparison to prevent timing attacks
+- `withAuth()` HOF in `api-middleware.ts` wraps route handlers — injects `x-user-id` header into cloned request so handlers read session user without re-fetching
+
+### Schema Changes
+- Added `Account`, `Session`, `VerificationToken` models to Prisma schema (standard NextAuth models for future OAuth/email verification)
+- Extended `User` model with `passwordHash`, `emailVerified`, `image` fields
+- Existing User records (e.g., demo-user) remain compatible — all new fields are optional
+
+### Route Protection Pattern
+- Deal filter routes (GET/POST/PATCH/DELETE) require auth — userId comes from session, not request body
+- Notification subscribe POST requires auth
+- Rivers GET (list + detail) remain public; POST/PATCH/DELETE require auth
+- Filter ownership enforced at handler level: 403 if session user != filter owner
+
+### Key Files
+- `web/src/lib/auth.ts` — NextAuth config (credentials provider, JWT callbacks)
+- `web/src/lib/auth-utils.ts` — password hashing, `getCurrentUser()`, `requireAuth()`
+- `web/src/lib/api-middleware.ts` — `withAuth()` HOF
+- `web/src/app/api/auth/[...nextauth]/route.ts` — NextAuth route handler
+- `web/src/app/api/auth/register/route.ts` — registration with Zod validation, 409 on duplicate email
+- Updated 4 route files + 4 test files. All 239 tests pass, build succeeds.

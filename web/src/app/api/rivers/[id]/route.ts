@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { riverUpdateSchema } from "@/lib/validations";
 import { apiError, handleApiError } from "@/lib/api-errors";
+import { withAuth } from "@/lib/api-middleware";
 
 export async function GET(
   _request: Request,
@@ -41,12 +42,12 @@ export async function GET(
   }
 }
 
-export async function PATCH(
+export const PATCH = withAuth(async (
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  context?: unknown
+) => {
   try {
-    const { id } = await params;
+    const { id } = await (context as { params: Promise<{ id: string }> }).params;
     const body = await request.json();
 
     const parsed = riverUpdateSchema.safeParse(body);
@@ -71,14 +72,14 @@ export async function PATCH(
   } catch (error) {
     return handleApiError(error);
   }
-}
+});
 
-export async function DELETE(
+export const DELETE = withAuth(async (
   _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+  context?: unknown
+) => {
   try {
-    const { id } = await params;
+    const { id } = await (context as { params: Promise<{ id: string }> }).params;
 
     const existing = await prisma.river.findUnique({ where: { id } });
     if (!existing) {
@@ -91,4 +92,4 @@ export async function DELETE(
   } catch (error) {
     return handleApiError(error);
   }
-}
+});

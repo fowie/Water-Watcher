@@ -2,9 +2,9 @@
  * Tests for the Deal Filters [id] API route handler.
  *
  * Tests:
- * - GET /api/deals/filters/:id
+ * - GET /api/deals/filters/:id (requires auth + ownership)
  * - PATCH /api/deals/filters/:id (update with ownership check)
- * - DELETE /api/deals/filters/:id
+ * - DELETE /api/deals/filters/:id (requires auth + ownership)
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -17,8 +17,14 @@ const mockPrisma = vi.hoisted(() => ({
   },
 }));
 
+const mockAuth = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/db", () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock("@/lib/auth", () => ({
+  auth: mockAuth,
 }));
 
 import { GET, PATCH, DELETE } from "@/app/api/deals/filters/[id]/route";
@@ -30,9 +36,10 @@ function mockRequest(url: string, options: RequestInit = {}): Request {
 describe("GET /api/deals/filters/:id", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue({ user: { id: "user-1", email: "test@example.com" } });
   });
 
-  it("returns filter when found", async () => {
+  it("returns filter when found and owned by user", async () => {
     const filter = {
       id: "f1",
       userId: "user-1",
@@ -60,11 +67,41 @@ describe("GET /api/deals/filters/:id", () => {
     expect(res.status).toBe(404);
     expect(data.error).toBe("Deal filter not found");
   });
+
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const req = mockRequest("http://localhost:3000/api/deals/filters/f1");
+    const res = await GET(req, { params: Promise.resolve({ id: "f1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(data.error).toBe("Authentication required");
+  });
+
+  it("returns 403 when filter belongs to another user", async () => {
+    const filter = {
+      id: "f1",
+      userId: "other-user",
+      name: "Not yours",
+      keywords: ["raft"],
+      _count: { matches: 0 },
+    };
+    mockPrisma.dealFilter.findUnique.mockResolvedValue(filter);
+
+    const req = mockRequest("http://localhost:3000/api/deals/filters/f1");
+    const res = await GET(req, { params: Promise.resolve({ id: "f1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(data.error).toBe("Not authorized to view this filter");
+  });
 });
 
 describe("PATCH /api/deals/filters/:id", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue({ user: { id: "user-1", email: "test@example.com" } });
   });
 
   it("updates a filter with valid data", async () => {
@@ -76,7 +113,7 @@ describe("PATCH /api/deals/filters/:id", () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", name: "New Name" }),
+      body: JSON.stringify({ name: "New Name" }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
     const data = await res.json();
@@ -91,7 +128,7 @@ describe("PATCH /api/deals/filters/:id", () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/nonexistent", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", name: "Updated" }),
+      body: JSON.stringify({ name: "Updated" }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "nonexistent" }) });
     const data = await res.json();
@@ -100,14 +137,14 @@ describe("PATCH /api/deals/filters/:id", () => {
     expect(data.error).toBe("Deal filter not found");
   });
 
-  it("returns 403 when userId does not match filter owner", async () => {
-    const existing = { id: "f1", userId: "user-1", name: "Private", keywords: ["raft"] };
+  it("returns 403 when session user does not match filter owner", async () => {
+    const existing = { id: "f1", userId: "other-user", name: "Private", keywords: ["raft"] };
     mockPrisma.dealFilter.findUnique.mockResolvedValue(existing);
 
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-999", name: "Hacked" }),
+      body: JSON.stringify({ name: "Hacked" }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
     const data = await res.json();
@@ -117,9 +154,8 @@ describe("PATCH /api/deals/filters/:id", () => {
     expect(mockPrisma.dealFilter.update).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when userId is missing", async () => {
-    const existing = { id: "f1", userId: "user-1", name: "Test", keywords: ["raft"] };
-    mockPrisma.dealFilter.findUnique.mockResolvedValue(existing);
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValue(null);
 
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
@@ -129,15 +165,15 @@ describe("PATCH /api/deals/filters/:id", () => {
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
     const data = await res.json();
 
-    expect(res.status).toBe(400);
-    expect(data.error).toBe("userId is required");
+    expect(res.status).toBe(401);
+    expect(data.error).toBe("Authentication required");
   });
 
   it("returns 400 for invalid update data", async () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", maxPrice: -50 }),
+      body: JSON.stringify({ maxPrice: -50 }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
 
@@ -155,7 +191,7 @@ describe("PATCH /api/deals/filters/:id", () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", isActive: false }),
+      body: JSON.stringify({ isActive: false }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
     const data = await res.json();
@@ -172,7 +208,7 @@ describe("PATCH /api/deals/filters/:id", () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", name: "Updated" }),
+      body: JSON.stringify({ name: "Updated" }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
     const data = await res.json();
@@ -185,7 +221,7 @@ describe("PATCH /api/deals/filters/:id", () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", keywords: [] }),
+      body: JSON.stringify({ keywords: [] }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
 
@@ -202,7 +238,7 @@ describe("PATCH /api/deals/filters/:id", () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", name: "Clean", hackerField: "evil" }),
+      body: JSON.stringify({ name: "Clean", hackerField: "evil" }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
 
@@ -221,7 +257,7 @@ describe("PATCH /api/deals/filters/:id", () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", maxPrice: null }),
+      body: JSON.stringify({ maxPrice: null }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
     const data = await res.json();
@@ -234,7 +270,7 @@ describe("PATCH /api/deals/filters/:id", () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", maxPrice: 0 }),
+      body: JSON.stringify({ maxPrice: 0 }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
 
@@ -251,7 +287,6 @@ describe("PATCH /api/deals/filters/:id", () => {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        userId: "user-1",
         name: "New",
         keywords: ["kayak", "canoe"],
         regions: ["denver"],
@@ -270,7 +305,7 @@ describe("PATCH /api/deals/filters/:id", () => {
     const req = mockRequest("http://localhost:3000/api/deals/filters/f1", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: "user-1", name: "" }),
+      body: JSON.stringify({ name: "" }),
     });
     const res = await PATCH(req, { params: Promise.resolve({ id: "f1" }) });
 
@@ -281,9 +316,10 @@ describe("PATCH /api/deals/filters/:id", () => {
 describe("DELETE /api/deals/filters/:id", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue({ user: { id: "user-1", email: "test@example.com" } });
   });
 
-  it("deletes a filter and returns 204", async () => {
+  it("deletes a filter owned by the user and returns 204", async () => {
     mockPrisma.dealFilter.findUnique.mockResolvedValue({ id: "f1", userId: "user-1" });
     mockPrisma.dealFilter.delete.mockResolvedValue({ id: "f1" });
 
@@ -303,5 +339,27 @@ describe("DELETE /api/deals/filters/:id", () => {
 
     expect(res.status).toBe(404);
     expect(data.error).toBe("Deal filter not found");
+  });
+
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValue(null);
+
+    const req = mockRequest("http://localhost:3000/api/deals/filters/f1", { method: "DELETE" });
+    const res = await DELETE(req, { params: Promise.resolve({ id: "f1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(data.error).toBe("Authentication required");
+  });
+
+  it("returns 403 when filter belongs to another user", async () => {
+    mockPrisma.dealFilter.findUnique.mockResolvedValue({ id: "f1", userId: "other-user" });
+
+    const req = mockRequest("http://localhost:3000/api/deals/filters/f1", { method: "DELETE" });
+    const res = await DELETE(req, { params: Promise.resolve({ id: "f1" }) });
+    const data = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(data.error).toBe("Not authorized to delete this filter");
   });
 });

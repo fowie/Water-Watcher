@@ -2,9 +2,9 @@
  * Tests for the Push Notification Subscribe API.
  *
  * Tests:
- * - POST /api/notifications/subscribe
+ * - POST /api/notifications/subscribe (requires auth)
  * - Validation of push subscription data
- * - Missing userId handling
+ * - Unauthenticated access handling
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -18,8 +18,14 @@ const mockPrisma = vi.hoisted(() => ({
   },
 }));
 
+const mockAuth = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/db", () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock("@/lib/auth", () => ({
+  auth: mockAuth,
 }));
 
 import { POST } from "@/app/api/notifications/subscribe/route";
@@ -31,6 +37,7 @@ function mockRequest(url: string, options: RequestInit = {}): Request {
 describe("POST /api/notifications/subscribe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAuth.mockResolvedValue({ user: { id: "user-1", email: "test@example.com" } });
   });
 
   it("creates subscription with valid data", async () => {
@@ -41,7 +48,6 @@ describe("POST /api/notifications/subscribe", () => {
       p256dh: "BIG_KEY",
       auth: "AUTH_SECRET",
     };
-    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
     mockPrisma.pushSubscription.upsert.mockResolvedValue(expectedSub);
 
     const req = mockRequest(
@@ -50,7 +56,6 @@ describe("POST /api/notifications/subscribe", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "user-1",
           subscription: {
             endpoint: "https://fcm.googleapis.com/fcm/send/abc123",
             keys: {
@@ -68,7 +73,9 @@ describe("POST /api/notifications/subscribe", () => {
     expect(data.endpoint).toBe("https://fcm.googleapis.com/fcm/send/abc123");
   });
 
-  it("returns 400 when userId is missing", async () => {
+  it("returns 401 when not authenticated", async () => {
+    mockAuth.mockResolvedValue(null);
+
     const req = mockRequest(
       "http://localhost:3000/api/notifications/subscribe",
       {
@@ -84,9 +91,9 @@ describe("POST /api/notifications/subscribe", () => {
     );
     const res = await POST(req);
 
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
     const data = await res.json();
-    expect(data.error).toBe("userId is required");
+    expect(data.error).toBe("Authentication required");
   });
 
   it("returns 400 for invalid subscription (missing endpoint)", async () => {
@@ -96,7 +103,6 @@ describe("POST /api/notifications/subscribe", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "user-1",
           subscription: {
             keys: { p256dh: "key", auth: "auth" },
           },
@@ -117,7 +123,6 @@ describe("POST /api/notifications/subscribe", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "user-1",
           subscription: {
             endpoint: "not-a-url",
             keys: { p256dh: "key", auth: "auth" },
@@ -137,7 +142,6 @@ describe("POST /api/notifications/subscribe", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "user-1",
           subscription: {
             endpoint: "https://push.example.com/send/123",
           },
@@ -151,7 +155,6 @@ describe("POST /api/notifications/subscribe", () => {
 
   it("upserts by endpoint (updates existing subscription)", async () => {
     const endpoint = "https://fcm.googleapis.com/fcm/send/existing";
-    mockPrisma.user.findUnique.mockResolvedValue({ id: "user-1" });
     mockPrisma.pushSubscription.upsert.mockResolvedValue({
       id: "sub-1",
       userId: "user-1",
@@ -166,7 +169,6 @@ describe("POST /api/notifications/subscribe", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "user-1",
           subscription: {
             endpoint,
             keys: { p256dh: "NEW_KEY", auth: "NEW_AUTH" },

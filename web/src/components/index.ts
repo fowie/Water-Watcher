@@ -28,4 +28,7 @@ export { CreateFilterDialog } from "./create-filter-dialog";
 export { EditRiverDialog } from "./edit-river-dialog";
 export { NotificationToggle } from "./notification-toggle";
 export { MapLink } from "./map-link";
+export { UserMenuDesktop, UserMenuMobile } from "./user-menu";
+export { AuthGuard } from "./auth-guard";
+export { SessionProvider } from "./session-provider";
 export { Navigation } from "./navigation";

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,11 +16,15 @@ import {
   Settings,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenuDesktop, UserMenuMobile } from "@/components/user-menu";
 
-const navItems = [
+const publicNavItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/rivers", label: "Rivers", icon: Mountain },
   { href: "/deals", label: "Raft Watch", icon: ShoppingBag },
+];
+
+const authNavItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -34,6 +39,9 @@ export function Navigation() {
 
 function DesktopNav() {
   const pathname = usePathname();
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
+  const navItems = isAuthenticated ? [...publicNavItems, ...authNavItems] : publicNavItems;
 
   return (
     <aside className="hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 border-r border-[var(--border)] bg-[var(--background)] z-30">
@@ -68,8 +76,9 @@ function DesktopNav() {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-6 py-4 border-t border-[var(--border)] flex items-center justify-between">
+      {/* User menu + theme toggle */}
+      <UserMenuDesktop />
+      <div className="px-6 py-3 border-t border-[var(--border)] flex items-center justify-between">
         <p className="text-xs text-[var(--muted-foreground)]">
           🌊 Track rivers. Score gear.
         </p>
@@ -81,6 +90,9 @@ function DesktopNav() {
 
 function MobileNav() {
   const pathname = usePathname();
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
+  const navItems = isAuthenticated ? [...publicNavItems, ...authNavItems] : publicNavItems;
   const [sheetOpen, setSheetOpen] = useState(false);
 
   return (
@@ -92,6 +104,7 @@ function MobileNav() {
           <span className="font-bold text-lg">Water-Watcher</span>
         </div>
         <div className="flex items-center gap-1">
+          <UserMenuMobile />
           <ThemeToggle />
           <Button
             variant="ghost"

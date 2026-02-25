@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
+import { AuthGuard } from "@/components/auth-guard";
 import { getDealFilters, updateDealFilter } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -23,9 +25,18 @@ import {
 } from "lucide-react";
 import type { DealFilterRecord } from "@/types";
 
-const DEMO_USER_ID = "demo-user";
-
 export default function SettingsPage() {
+  return (
+    <AuthGuard>
+      <SettingsContent />
+    </AuthGuard>
+  );
+}
+
+function SettingsContent() {
+  const { data: session } = useSession();
+  const userId = session?.user?.id || "";
+
   return (
     <main className="p-4 md:p-8 max-w-3xl mx-auto space-y-8">
       {/* Header */}
@@ -39,7 +50,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <NotificationPreferences />
+      <NotificationPreferences userId={userId} />
       <Separator />
       <DataManagement />
       <Separator />
@@ -50,22 +61,23 @@ export default function SettingsPage() {
 
 /* ─── Notification Preferences ───────────────────────── */
 
-function NotificationPreferences() {
+function NotificationPreferences({ userId }: { userId: string }) {
   const [filters, setFilters] = useState<DealFilterRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const fetchFilters = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
     try {
-      const data = await getDealFilters(DEMO_USER_ID);
+      const data = await getDealFilters(userId);
       setFilters(data);
     } catch {
       // Silent fail
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     fetchFilters();
@@ -74,7 +86,7 @@ function NotificationPreferences() {
   const handleToggle = async (filter: DealFilterRecord, checked: boolean) => {
     setTogglingId(filter.id);
     try {
-      await updateDealFilter(filter.id, DEMO_USER_ID, { isActive: checked });
+      await updateDealFilter(filter.id, userId, { isActive: checked });
       setFilters((prev) =>
         prev.map((f) => (f.id === filter.id ? { ...f, isActive: checked } : f))
       );

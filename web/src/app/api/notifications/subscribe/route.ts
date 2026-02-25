@@ -1,33 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { pushSubscriptionSchema } from "@/lib/validations";
+import { handleApiError } from "@/lib/api-errors";
+import { withAuth } from "@/lib/api-middleware";
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (request: Request) => {
   try {
+    const userId = request.headers.get("x-user-id")!;
     const body = await request.json();
-    const { userId, subscription } = body;
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "userId is required" },
-        { status: 400 }
-      );
-    }
-
-    const parsed = pushSubscriptionSchema.safeParse(subscription);
+    const parsed = pushSubscriptionSchema.safeParse(body.subscription ?? body);
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Invalid subscription", details: parsed.error.flatten() },
         { status: 400 }
-      );
-    }
-
-    // Verify user exists
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
       );
     }
 
@@ -47,10 +33,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(sub, { status: 201 });
   } catch (error) {
-    console.error("POST /api/notifications/subscribe error:", error);
-    return NextResponse.json(
-      { error: "Failed to save push subscription" },
-      { status: 500 }
-    );
+    return handleApiError(error);
   }
-}
+});
