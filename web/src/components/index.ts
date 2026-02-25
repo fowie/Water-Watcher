@@ -38,3 +38,6 @@ export { TripCard } from "./trip-card";
 export { RiverPickerDialog } from "./river-picker-dialog";
 export { RiverReviews, StarRating } from "./river-reviews";
 export { ReviewForm } from "./review-form";
+export { SearchPalette } from "./search-palette";
+export { PhotoGallery } from "./photo-gallery";
+export { PhotoUpload } from "./photo-upload";

@@ -42,6 +42,7 @@ class User(Base):
     alert_logs = relationship("AlertLog", back_populates="user")
     trips = relationship("Trip", back_populates="user")
     reviews = relationship("RiverReview", back_populates="user")
+    photos = relationship("RiverPhoto", back_populates="user")
 
 
 class River(Base):
@@ -66,6 +67,7 @@ class River(Base):
     tracked_by = relationship("UserRiver", back_populates="river")
     trip_stops = relationship("TripStop", back_populates="river")
     reviews = relationship("RiverReview", back_populates="river")
+    photos = relationship("RiverPhoto", back_populates="river")
 
 
 class RiverCondition(Base):
@@ -289,6 +291,25 @@ class TripStop(Base):
 
     __table_args__ = (
         Index("ix_trip_stops_trip_day", "trip_id", "day_number"),
+    )
+
+
+class RiverPhoto(Base):
+    __tablename__ = "river_photos"
+
+    id = Column(String, primary_key=True)
+    river_id = Column(String, ForeignKey("rivers.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    url = Column(String, nullable=False)
+    caption = Column(String)
+    taken_at = Column(DateTime)
+    created_at = Column(DateTime, default=_utc_now)
+
+    river = relationship("River", back_populates="photos")
+    user = relationship("User", back_populates="photos")
+
+    __table_args__ = (
+        Index("ix_river_photos_river_created", "river_id", "created_at"),
     )
 
 

@@ -122,3 +122,13 @@ export const reviewSchema = z.object({
 });
 
 export type ReviewInput = z.infer<typeof reviewSchema>;
+
+// ─── River Photos ─────────────────────────────────────────
+
+export const photoSchema = z.object({
+  url: z.string().min(1, "Photo URL is required"),
+  caption: z.string().max(500).optional(),
+  takenAt: z.string().datetime().optional(),
+});
+
+export type PhotoInput = z.infer<typeof photoSchema>;

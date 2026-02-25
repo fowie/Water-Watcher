@@ -474,3 +474,80 @@
 **2026-02-24 (Round 10 cross-agent — from Pappas):** 87 new web tests (485→572): trips (30), trip stops (17), reviews (20), rate limiting (20). Grand total 1,251. Found `tripUpdateSchema` missing `endDate >= startDate` refinement. Also observed reviews GET has no sort parameter.
 
 **2026-02-24 (Round 10 cross-agent — from Coordinator):** Fixed `tripUpdateSchema` date refinement bug — added `.refine()` for `endDate >= startDate` on PATCH when both fields present.
+
+**2026-02-24:** Round 11 — Global Search with Command Palette, River Photo Gallery, Scrape Monitor Dashboard:
+
+### Global Search — Command Palette (`web/src/components/search-palette.tsx`)
+- Full-screen overlay triggered by Cmd/Ctrl+K (global keyboard shortcut via `keydown` listener)
+- Also triggered by search icon button added to navigation (desktop sidebar header + mobile top header)
+- Search input at top with dimmed background, ESC to close
+- 300ms debounced input calling `GET /api/search?q={query}&limit=8`
+- Results grouped by type (Rivers, Deals, Trips, Reviews) with lucide icons per group and uppercase section headers
+- Arrow keys navigate results, Enter selects, Escape closes
+- Selected result highlighted with primary color, shows CornerDownLeft hint icon
+- Recent searches stored in localStorage (last 5) via `RECENT_SEARCHES_KEY`
+- Empty state: "Type to search rivers, deals, trips, and reviews..."
+- Footer shows result count and "View all results" link to `/search` page
+
+### Global Search — Full Page (`web/src/app/search/page.tsx`)
+- Full search results page at `/search?q=term&type=rivers`
+- URL reflects search params; persists across page loads
+- Type filter tabs: All | Rivers | Deals | Trips | Reviews (pill-style toggle buttons)
+- Results as cards with type icon, title, subtitle, type badge, external link indicator
+- Grid layout: 2 columns on desktop, 1 on mobile
+- Empty states for no results and pre-search
+- Suspense boundary wrapping `useSearchParams()` to avoid Next.js build warnings
+- Layout + loading.tsx created for the route
+
+### Navigation Search Updates (`web/src/components/navigation.tsx`)
+- Added `Search` and `Activity` icons from lucide-react
+- Desktop sidebar: search icon button in brand header area, shows ⌘K tooltip
+- Mobile header: search icon button before notification bell
+- `SearchPalette` mounted at Navigation level, state lifted via `onSearchOpen` callbacks
+- `DesktopNav` and `MobileNav` now accept `onSearchOpen` prop
+
+### River Photo Gallery (`web/src/components/photo-gallery.tsx`)
+- Grid layout: 3 columns desktop, 2 mobile
+- Click photo → lightbox overlay with dark background
+- Lightbox: arrow key navigation, X to close, caption overlay, photo counter
+- Photo count badge at top
+- Intersection observer lazy loading with sentinel div for infinite scroll
+- Loading state with spinner, empty state with camera icon
+- Lightbox locks body scroll while open
+
+### Photo Upload (`web/src/components/photo-upload.tsx`)
+- "Add Photo" button visible only when authenticated (via `useSession()`)
+- Dialog with: file input (jpg/png/webp), base64 data URL preview, caption input, date picker
+- Max file size check: 5MB with error message
+- Preview with remove button (X icon overlay)
+- Upload progress state with Loader2 spinner
+- After upload: toast success, refresh gallery via `onUploadComplete` callback
+- Reset state on dialog close
+
+### River Detail Updates (`web/src/app/rivers/[id]/page.tsx`)
+- Added "Photos" tab (Camera icon) as 6th tab (grid-cols-6 → grid-cols-7)
+- Tab label shows count: "Photos (5)" when photos exist
+- Photo count fetched alongside river data
+- `photoRefreshKey` state triggers re-fetch after upload
+- `PhotoGallery` and `PhotoUpload` imported and wired up
+
+### Scrape Monitor Dashboard (`web/src/app/admin/scrapers/page.tsx`)
+- Protected by `AuthGuard`
+- System stats row: Total Rivers, Conditions (24h), Active Hazards, Sources — card-based summary
+- One scraper card per source (USGS, American Whitewater, Craigslist, BLM, USFS)
+- Each card shows: emoji + name, status dot (green/yellow/red based on interval), last scrape (timeAgo), 24h stats (runs, success rate %, items scraped)
+- Status color logic: green (<2x interval), yellow (2-3x), red (>3x or never)
+- Click card → expand detailed view with stats row + scrape history table
+- Scrape history: status icon (CheckCircle2/XCircle), timestamp, status badge, items count, duration, error message (truncated with title tooltip)
+- Paginated to show last 50 entries, scrollable container (max-h-64)
+- Added "Scrapers" (Activity icon) to `authNavItems` in navigation, between Export and Settings
+- Layout + loading.tsx created for the route
+
+### Component Index Updates
+- Exported: `SearchPalette`, `PhotoGallery`, `PhotoUpload`
+
+### Build
+- `npx next build` passes cleanly, all routes compiled
+- Admin scrapers page renders as dynamic route (ƒ)
+- Search page and river detail properly compile
+

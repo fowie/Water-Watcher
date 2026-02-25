@@ -20,10 +20,13 @@ import {
   Download,
   Compass,
   BarChart3,
+  Search,
+  Activity,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenuDesktop, UserMenuMobile } from "@/components/user-menu";
 import { NotificationBell } from "@/components/notification-bell";
+import { SearchPalette } from "@/components/search-palette";
 
 const publicNavItems = [
   { href: "/", label: "Home", icon: Home },
@@ -38,19 +41,23 @@ const authNavItems = [
   { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/export", label: "Export", icon: Download },
+  { href: "/admin/scrapers", label: "Scrapers", icon: Activity },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Navigation() {
+  const [searchOpen, setSearchOpen] = useState(false);
+
   return (
     <>
-      <DesktopNav />
-      <MobileNav />
+      <DesktopNav onSearchOpen={() => setSearchOpen(true)} />
+      <MobileNav onSearchOpen={() => setSearchOpen(true)} />
+      <SearchPalette open={searchOpen} onOpenChange={setSearchOpen} />
     </>
   );
 }
 
-function DesktopNav() {
+function DesktopNav({ onSearchOpen }: { onSearchOpen: () => void }) {
   const pathname = usePathname();
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -64,6 +71,14 @@ function DesktopNav() {
         <span className="text-xl font-bold tracking-tight">
           Water-Watcher
         </span>
+        <button
+          onClick={onSearchOpen}
+          className="ml-auto text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1.5 rounded-md hover:bg-[var(--secondary)] transition-colors"
+          aria-label="Search"
+          title="Search (⌘K)"
+        >
+          <Search className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
 
       {/* Nav links */}
@@ -104,7 +119,7 @@ function DesktopNav() {
   );
 }
 
-function MobileNav() {
+function MobileNav({ onSearchOpen }: { onSearchOpen: () => void }) {
   const pathname = usePathname();
   const { status } = useSession();
   const isAuthenticated = status === "authenticated";
@@ -120,6 +135,14 @@ function MobileNav() {
           <span className="font-bold text-lg">Water-Watcher</span>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onSearchOpen}
+            aria-label="Search"
+          >
+            <Search className="h-5 w-5" aria-hidden="true" />
+          </Button>
           <NotificationBell />
           <UserMenuMobile />
           <ThemeToggle />

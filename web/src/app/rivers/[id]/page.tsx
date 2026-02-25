@@ -16,7 +16,7 @@ import { FlowTrend } from "@/components/flow-trend";
 import { WeatherWidget } from "@/components/weather-widget";
 import { RiverReviews } from "@/components/river-reviews";
 import { ReviewForm } from "@/components/review-form";
-import { getRiver, getRiverReviews } from "@/lib/api";
+import { getRiver, getRiverReviews, getRiverPhotos } from "@/lib/api";
 import { formatFlowRate, timeAgo } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -34,8 +34,11 @@ import {
   Clock,
   CloudSun,
   MessageSquare,
+  Camera,
 } from "lucide-react";
 import Link from "next/link";
+import { PhotoGallery } from "@/components/photo-gallery";
+import { PhotoUpload } from "@/components/photo-upload";
 import type { RiverDetail, ConditionRecord, HazardRecord, CampsiteRecord, RapidRecord } from "@/types";
 
 export default function RiverDetailPage() {
@@ -47,6 +50,8 @@ export default function RiverDetailPage() {
   const [reviewFormOpen, setReviewFormOpen] = useState(false);
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [reviewCount, setReviewCount] = useState(0);
+  const [photoCount, setPhotoCount] = useState(0);
+  const [photoRefreshKey, setPhotoRefreshKey] = useState(0);
 
   const loadRiver = useCallback(async () => {
     setLoading(true);
@@ -60,6 +65,10 @@ export default function RiverDetailPage() {
         setAvgRating(reviewsData.averageRating);
         setReviewCount(reviewsData.total);
       }
+      // Fetch photo count
+      getRiverPhotos(id, { limit: 1 })
+        .then((p) => setPhotoCount(p.total))
+        .catch(() => {});
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load river");
     } finally {
@@ -190,7 +199,7 @@ export default function RiverDetailPage() {
 
       {/* Tabbed content */}
       <Tabs defaultValue="conditions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="conditions">
             <Droplets className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
             Conditions
@@ -210,6 +219,10 @@ export default function RiverDetailPage() {
           <TabsTrigger value="campsites">
             <Tent className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
             Campsites
+          </TabsTrigger>
+          <TabsTrigger value="photos">
+            <Camera className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
+            Photos{photoCount > 0 ? ` (${photoCount})` : ""}
           </TabsTrigger>
           <TabsTrigger value="reviews">
             <MessageSquare className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
@@ -231,6 +244,19 @@ export default function RiverDetailPage() {
         </TabsContent>
         <TabsContent value="campsites">
           <CampsitesTab campsites={river.campsites ?? []} />
+        </TabsContent>
+        <TabsContent value="photos">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Photos</h2>
+            <PhotoUpload
+              riverId={id}
+              onUploadComplete={() => {
+                setPhotoRefreshKey((k) => k + 1);
+                setPhotoCount((c) => c + 1);
+              }}
+            />
+          </div>
+          <PhotoGallery riverId={id} refreshKey={photoRefreshKey} />
         </TabsContent>
         <TabsContent value="reviews">
           <RiverReviews riverId={id} onWriteReview={() => setReviewFormOpen(true)} />

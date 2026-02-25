@@ -34,6 +34,7 @@ model River {
   trackedBy   UserRiver[]
   tripStops   TripStop[]
   reviews     RiverReview[]
+  photos      RiverPhoto[]
 
   @@map("rivers")
 }
@@ -190,6 +191,7 @@ model User {
   alertLogs     AlertLog[]
   trips         Trip[]
   reviews       RiverReview[]
+  photos        RiverPhoto[]
 
   @@map("users")
 }
@@ -353,6 +355,24 @@ model TripStop {
 
   @@index([tripId, dayNumber])
   @@map("trip_stops")
+}
+
+// ─── River Photos ─────────────────────────────────────
+
+model RiverPhoto {
+  id          String   @id @default(cuid())
+  riverId     String   @map("river_id")
+  userId      String   @map("user_id")
+  url         String   // stored photo URL or base64 data URL
+  caption     String?
+  takenAt     DateTime? @map("taken_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  river       River    @relation(fields: [riverId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([riverId, createdAt])
+  @@map("river_photos")
 }
 
 // ─── River Reviews ────────────────────────────────────

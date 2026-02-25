@@ -410,3 +410,42 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 10 cross-agent — from Pappas):** 87 new web tests (485→572): trips (30), trip stops (17), reviews (20), rate limiting (20). Grand total 1,251. Found `tripUpdateSchema` missing `endDate >= startDate` refinement — fixed by Coordinator. Also noted reviews GET lacks sort parameter.
 
 **2026-02-24 (Round 10 cross-agent — from Coordinator):** Fixed `tripUpdateSchema` date refinement bug — added `.refine()` to enforce `endDate >= startDate` when both fields present in PATCH.
+
+**2026-02-24:** Round 11 — Global Search API, River Photo Gallery, Scrape Monitoring API:
+
+### Global Search API (`web/src/app/api/search/route.ts`)
+- GET `/api/search?q=...&type=...&limit=...` — unified search across rivers, deals, trips, and reviews
+- Zod validation on query params: `q` required, `type` enum (rivers|deals|trips|reviews|all, default all), `limit` 1-50 (default 10)
+- Rivers: searches name, state, region, description (case-insensitive `contains`), public
+- Deals: searches title, description, category (active only), public
+- Trips: searches name, notes (user's own only, auth required; silently skipped for `type=all` when unauthenticated; returns 401 for `type=trips` without auth)
+- Reviews: searches title, body (includes river name in results), public
+- Returns grouped results: `{ rivers, deals, trips, reviews, totalResults }` — each item has `type`, `id`, `title`, `subtitle`, `url`
+- Client function: `search({ q, type?, limit? })` in `api.ts`
+
+### River Photo Gallery
+- New Prisma model: `RiverPhoto` with `riverId`, `userId`, `url`, `caption`, `takenAt`, cascade deletes, index on `[riverId, createdAt]`
+- Added `photos RiverPhoto[]` relation to both `River` and `User` models (Prisma + SQLAlchemy)
+- `GET /api/rivers/:id/photos` — public, paginated (limit/offset), includes user info
+- `POST /api/rivers/:id/photos` — auth required, rate-limited (10/min via `reviewConfig`), validates river exists, enforces max 20 photos per user per river
+- `DELETE /api/rivers/:id/photos/:photoId` — auth required, owner-only (403 on mismatch), returns 204
+- Zod schema: `photoSchema` (url required, caption max 500, takenAt optional datetime)
+- Client functions: `getRiverPhotos()`, `uploadRiverPhoto()`, `deleteRiverPhoto()` in `api.ts`
+- SQLAlchemy `RiverPhoto` model added to `pipeline/models/models.py` with matching index
+
+### Scrape Monitoring API
+- `GET /api/admin/scrapers` — auth required. Returns per-source stats for all 5 scrapers (usgs, aw, craigslist, blm, usfs): last scrape time, status, 24h totals (scrapes, successes, items), average duration. Also returns summary: total rivers, 24h conditions, active hazards.
+- `GET /api/admin/scrapers/:source` — auth required. Returns last 50 log entries with detailed stats: success rate, avg items/run, total items, avg duration. Validates source against allowed list.
+- Uses existing `ScrapeLog` model (no schema changes needed)
+- Client functions: `getScraperStats()`, `getScraperDetail(source)` in `api.ts`
+
+### Key File Paths
+- `web/src/app/api/search/route.ts` — global search
+- `web/src/app/api/rivers/[id]/photos/route.ts` — photo list/upload
+- `web/src/app/api/rivers/[id]/photos/[photoId]/route.ts` — photo delete
+- `web/src/app/api/admin/scrapers/route.ts` — scraper overview
+- `web/src/app/api/admin/scrapers/[source]/route.ts` — scraper detail
+
+### Test Results
+- Web: 572 passed (no regressions)
+- Pipeline: 636 passed, 43 skipped (no regressions)

@@ -13,6 +13,7 @@ import type {
   TripUpdateInput,
   TripStopInput,
   ReviewInput,
+  PhotoInput,
 } from "@/lib/validations";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -456,6 +457,150 @@ export async function submitReview(
     method: "POST",
     body: JSON.stringify(data),
   });
+}
+
+// ─── Helpers ────────────────────────────────────────────
+
+// ─── Global Search ──────────────────────────────────────
+
+export interface SearchResultItem {
+  type: "river" | "deal" | "trip" | "review";
+  id: string;
+  title: string;
+  subtitle: string;
+  url: string;
+}
+
+export interface SearchResponse {
+  rivers: SearchResultItem[];
+  deals: SearchResultItem[];
+  trips: SearchResultItem[];
+  reviews: SearchResultItem[];
+  totalResults: number;
+}
+
+export async function search(params: {
+  q: string;
+  type?: "rivers" | "deals" | "trips" | "reviews" | "all";
+  limit?: number;
+}): Promise<SearchResponse> {
+  const sp = new URLSearchParams();
+  sp.set("q", params.q);
+  if (params.type) sp.set("type", params.type);
+  if (params.limit) sp.set("limit", String(params.limit));
+  return fetcher<SearchResponse>(`/api/search?${sp.toString()}`);
+}
+
+// ─── River Photos ───────────────────────────────────────
+
+export interface RiverPhotoRecord {
+  id: string;
+  riverId: string;
+  userId: string;
+  url: string;
+  caption: string | null;
+  takenAt: string | null;
+  createdAt: string;
+  user: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  };
+}
+
+export interface RiverPhotosResponse {
+  photos: RiverPhotoRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export async function getRiverPhotos(
+  riverId: string,
+  params?: { limit?: number; offset?: number }
+): Promise<RiverPhotosResponse> {
+  const sp = new URLSearchParams();
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const q = sp.toString();
+  return fetcher<RiverPhotosResponse>(
+    `/api/rivers/${riverId}/photos${q ? `?${q}` : ""}`
+  );
+}
+
+export async function uploadRiverPhoto(
+  riverId: string,
+  data: PhotoInput
+): Promise<RiverPhotoRecord> {
+  return fetcher<RiverPhotoRecord>(`/api/rivers/${riverId}/photos`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteRiverPhoto(
+  riverId: string,
+  photoId: string
+): Promise<void> {
+  const res = await fetch(`${BASE}/api/rivers/${riverId}/photos/${photoId}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok && res.status !== 204) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Delete failed: ${res.status}`);
+  }
+}
+
+// ─── Scraper Monitoring ─────────────────────────────────
+
+export interface ScraperStat {
+  source: string;
+  lastScrapeAt: string | null;
+  lastStatus: string | null;
+  totalScrapes24h: number;
+  successCount24h: number;
+  itemsScraped24h: number;
+  avgDurationMs: number | null;
+}
+
+export interface ScraperStatsResponse {
+  scrapers: ScraperStat[];
+  summary: {
+    totalRiversTracked: number;
+    conditionsLast24h: number;
+    activeHazards: number;
+  };
+}
+
+export async function getScraperStats(): Promise<ScraperStatsResponse> {
+  return fetcher<ScraperStatsResponse>("/api/admin/scrapers");
+}
+
+export interface ScraperLogEntry {
+  id: string;
+  status: string;
+  itemCount: number;
+  error: string | null;
+  duration: number | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+export interface ScraperDetailResponse {
+  source: string;
+  logs: ScraperLogEntry[];
+  stats: {
+    totalScrapes: number;
+    successRate: number;
+    avgItemsPerRun: number;
+    totalItems: number;
+    avgDurationMs: number | null;
+  };
+}
+
+export async function getScraperDetail(source: string): Promise<ScraperDetailResponse> {
+  return fetcher<ScraperDetailResponse>(`/api/admin/scrapers/${source}`);
 }
 
 // ─── Helpers ────────────────────────────────────────────
