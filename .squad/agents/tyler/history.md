@@ -551,3 +551,7 @@
 - Admin scrapers page renders as dynamic route (ƒ)
 - Search page and river detail properly compile
 
+
+**2026-02-24 (Round 11 cross-agent — from Utah):** Built Global Search API (`GET /api/search`) with Prisma `contains` case-insensitive matching across rivers, deals, trips, reviews. Auth-aware: trips scoped to user, silently omitted for anonymous `type=all`, 401 for explicit `type=trips`. Results grouped by type. River Photo Gallery: `RiverPhoto` model, paginated public GET, auth+rate-limited POST (max 20 per user per river), owner-only DELETE. Scrape Monitoring API at `GET /api/admin/scrapers` (per-source 24h stats) and `GET /api/admin/scrapers/:source` (last 50 logs, success rate). Both auth-required. Key files: `web/src/app/api/search/route.ts`, `web/src/app/api/rivers/[id]/photos/route.ts`, `web/src/app/api/admin/scrapers/route.ts`.
+
+**2026-02-24 (Round 11 cross-agent — from Pappas):** 96 new web tests (572→668): search (32), river photos (31), scrapers (33). Grand total 1,347. No bugs found. Observations: search `type=all` silently skips trips for anonymous users, scraper VALID_SOURCES is case-sensitive, photo POST rate limit runs before auth.

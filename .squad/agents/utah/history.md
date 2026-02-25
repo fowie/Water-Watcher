@@ -449,3 +449,7 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 ### Test Results
 - Web: 572 passed (no regressions)
 - Pipeline: 636 passed, 43 skipped (no regressions)
+
+**2026-02-24 (Round 11 cross-agent — from Tyler):** Built command palette search (`SearchPalette`) with Cmd/Ctrl+K trigger, grouped results, arrow-key navigation, recent searches in localStorage. Dedicated `/search` page with type filter tabs and Suspense boundary. Photo gallery (`PhotoGallery`) with lightbox (keyboard nav, scroll lock) and Intersection Observer lazy loading. Photo upload (`PhotoUpload`) with base64 data URL strategy, 5MB client-side limit. River detail tabs expanded to 7 columns (Photos tab with count badge). Scrape monitor dashboard at `/admin/scrapers` with traffic light health indicators (green/yellow/red based on interval multipliers), expandable detail cards with scrape history tables.
+
+**2026-02-24 (Round 11 cross-agent — from Pappas):** 96 new web tests (572→668): search (32), river photos (31), scrapers (33). Grand total 1,347. No bugs found. Observations: search `type=all` silently skips trips for anonymous users, scraper VALID_SOURCES is case-sensitive, photo POST rate limit runs before auth check.

@@ -683,3 +683,94 @@ Pipeline unchanged: 636 passed + 43 skipped. Grand total: 1,251.
 **BUG: tripUpdateSchema missing endDate >= startDate refinement** — `tripUpdateSchema` uses `.optional()` on all fields but has no `.refine()` to enforce `endDate >= startDate`. The create schema has this refinement but PATCH requests can set `endDate` before `startDate` without validation error. Fixed by Coordinator.
 
 **Observation:** Reviews GET route has no `sort` query parameter — always orders by `createdAt desc`. Sort by rating would require a `sort` param with `orderBy` switch.
+
+---
+
+## BD-028: Global Search API Design
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Unified search endpoint at `GET /api/search` searches across rivers, deals, trips, and reviews in a single request. Uses Prisma `contains` with `mode: "insensitive"` for case-insensitive substring matching rather than PostgreSQL full-text search — simpler and sufficient for the current scale.
+
+**Auth strategy:** Rivers and deals are public searches. Trips require authentication and are scoped to the requesting user's trips only. Reviews are public. When `type=all` and user is unauthenticated, trips are silently omitted rather than returning 401 — this keeps the search usable for anonymous users while protecting private data. Requesting `type=trips` explicitly without auth returns 401.
+
+**Result shape:** Grouped by type rather than a flat mixed list, allowing the frontend to render per-section results. Each item includes a `url` field for direct navigation.
+
+---
+
+## BD-029: River Photo Gallery — Max 20 Per User Per River
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Photo uploads enforce a maximum of 20 photos per user per river, checked via `prisma.riverPhoto.count()` before insert. This prevents individual users from flooding a river's gallery while still allowing many users to collectively contribute. Rate limiting at 10 per minute (same `reviewConfig` as review POST) prevents upload spam.
+
+Photo URLs are stored as-is — the API accepts both external URLs and data URLs (base64-encoded). No server-side image processing or cloud storage integration. If image hosting is needed later, a pre-signed upload URL pattern with S3/R2 would replace the direct data URL approach.
+
+Delete is owner-only (403 on mismatch). No admin override — can be added if moderation is needed.
+
+---
+
+## BD-030: Scrape Monitoring — Query-Only, No Schema Changes
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Scrape monitoring API queries the existing `ScrapeLog` model without any schema modifications. Stats are computed at query time via `Promise.all` with parallel Prisma queries (findMany, count, aggregate) rather than pre-computed materialized views. This is acceptable because scrape logs grow slowly (~5 scraper sources × ~6 runs/day = ~30 rows/day) and the admin endpoint is low-traffic.
+
+Both endpoints require authentication but no admin role check — any authenticated user can view scraper stats. If admin-only access is needed, a role field on User would need to be added.
+
+---
+
+## FE-021: Global Search — Command Palette Pattern
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Search palette uses a full-screen overlay triggered by Cmd/Ctrl+K (global `keydown` listener) or clicking the search icon in navigation. Mounted at the Navigation component level to ensure it's available on all pages. State managed via `open`/`onOpenChange` prop pattern passed down to `DesktopNav`/`MobileNav` via `onSearchOpen` callback.
+
+Results from `GET /api/search?q={query}&limit=8` are grouped by type (rivers, deals, trips, reviews) and displayed in sections. Arrow keys navigate a flat index across all groups. Recent searches stored in localStorage (last 5 entries, keyed by `water-watcher-recent-searches`).
+
+The dedicated `/search` page uses `useSearchParams()` wrapped in a Suspense boundary (required by Next.js for client components using search params) with type filter tabs and card grid results.
+
+---
+
+## FE-022: Photo Gallery — Base64 Upload Strategy
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Photos are uploaded as base64 data URLs via the existing `POST /api/rivers/:id/photos` endpoint. Client converts file to data URL using `FileReader.readAsDataURL()`. This avoids needing a separate file upload endpoint or object storage integration. Max file size enforced client-side at 5MB.
+
+Lightbox uses vanilla DOM event listeners for keyboard navigation (arrow keys, Escape) and locks body scroll while open (`document.body.style.overflow = "hidden"`). No external lightbox library needed.
+
+Gallery uses Intersection Observer for lazy loading additional photos beyond the initial 12, with a sentinel div approach.
+
+---
+
+## FE-023: River Detail Tab Grid — 7 Columns
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+River detail page now has 7 tabs: Conditions, Weather, Hazards, Rapids, Campsites, Photos, Reviews. Tab grid expanded from `grid-cols-6` to `grid-cols-7`. On mobile, tab labels hide icons (existing `hidden sm:inline-block` pattern). The Photos tab shows a count badge like "Photos (5)" when photos exist.
+
+---
+
+## FE-024: Scrape Monitor — Interval-Based Health Status
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Scraper health status uses a traffic light system based on the scraper's expected interval:
+- **Green** (Healthy): Last scrape within 2x the expected interval
+- **Yellow** (Delayed): Last scrape within 2-3x the expected interval
+- **Red** (Error): Last scrape older than 3x the expected interval, or never scraped
+
+Intervals are hardcoded in the frontend based on known pipeline settings: USGS/AW = 4 hours, Craigslist = 30 minutes, BLM/USFS = 6 hours. If these change in the pipeline, the frontend config should be updated to match.
+
+The scrapers page is at `/admin/scrapers` rather than a top-level `/scrapers` route, following admin page conventions. Added to `authNavItems` with the Activity icon.
+
+---
+
+## TST-008: Round 11 Test Coverage — Search, Photos, Scrapers
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+Added 96 new web tests across 3 files. Web: 572 → 668. Pipeline unchanged (636 + 43 skipped). Grand total: 1,347.
+
+**New test files:**
+- `search.test.ts` (32 tests): Global search API — q param validation, grouped result shapes, type filters (rivers/deals/trips/reviews/all), auth enforcement for trips, limit clamping, case-insensitive search, no-match empty arrays, null field subtitle fallbacks.
+- `river-photos.test.ts` (31 tests): GET paginated photos (public), POST create with auth/validation/20-photo-limit/rate-limiting, DELETE owner-only with 403/404 handling.
+- `scrapers.test.ts` (33 tests): Admin scraper summary (auth-required, 5 sources, 24h stats, system stats), per-source detail (log entries, aggregate stats, success rate, valid source enforcement).
+
+**Observations:**
+- Search route's `type=all` silently skips trips when user is unauthenticated — correct behavior but undocumented for API consumers.
+- Scraper stats `VALID_SOURCES` array is case-sensitive — "USGS" returns 400. This is consistent but could trip up API callers.
+- River photos POST uses `withRateLimit(withAuth(...))` composition — rate limit check runs before auth, so unauthenticated flood requests consume rate limit tokens.
