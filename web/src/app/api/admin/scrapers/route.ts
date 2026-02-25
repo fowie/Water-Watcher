@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { handleApiError } from "@/lib/api-errors";
-import { withAuth } from "@/lib/api-middleware";
+import { requireAdmin, isAdminError } from "@/lib/admin";
 
-export const GET = withAuth(async () => {
+export async function GET() {
+  const adminResult = await requireAdmin();
+  if (isAdminError(adminResult)) return adminResult;
+
   try {
     const sources = ["usgs", "aw", "craigslist", "blm", "usfs"];
     const now = new Date();
@@ -79,4 +82,4 @@ export const GET = withAuth(async () => {
   } catch (error) {
     return handleApiError(error);
   }
-});
+}

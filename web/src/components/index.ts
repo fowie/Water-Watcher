@@ -41,3 +41,4 @@ export { ReviewForm } from "./review-form";
 export { SearchPalette } from "./search-palette";
 export { PhotoGallery } from "./photo-gallery";
 export { PhotoUpload } from "./photo-upload";
+export { KeyboardShortcuts } from "./keyboard-shortcuts";

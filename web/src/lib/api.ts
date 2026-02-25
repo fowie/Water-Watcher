@@ -605,6 +605,44 @@ export async function getScraperDetail(source: string): Promise<ScraperDetailRes
   return fetcher<ScraperDetailResponse>(`/api/admin/scrapers/${source}`);
 }
 
+// ─── Admin: User Management ────────────────────────────
+
+export interface AdminUser {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+  createdAt: string;
+  trackedRiverCount: number;
+}
+
+export interface AdminUsersResponse {
+  users: AdminUser[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export async function getAdminUsers(params?: {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<AdminUsersResponse> {
+  const sp = new URLSearchParams();
+  if (params?.search) sp.set("search", params.search);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const q = sp.toString();
+  return fetcher<AdminUsersResponse>(`/api/admin/users${q ? `?${q}` : ""}`);
+}
+
+export async function updateAdminUserRole(userId: string, role: string): Promise<AdminUser> {
+  return fetcher<AdminUser>(`/api/admin/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ role }),
+  });
+}
+
 // ─── Helpers ────────────────────────────────────────────
 
 // ─── Auth: Password Reset ───────────────────────────────

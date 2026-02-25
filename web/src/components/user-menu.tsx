@@ -33,6 +33,18 @@ export function UserMenuDesktop() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [open]);
+
   if (status === "loading") {
     return (
       <div className="px-6 py-4 border-t border-[var(--border)]">
@@ -46,7 +58,7 @@ export function UserMenuDesktop() {
       <div className="px-4 py-4 border-t border-[var(--border)]">
         <Button variant="outline" className="w-full" asChild>
           <Link href="/auth/signin">
-            <LogIn className="h-4 w-4 mr-2" />
+            <LogIn className="h-4 w-4 mr-2" aria-hidden="true" />
             Sign In
           </Link>
         </Button>
@@ -71,7 +83,7 @@ export function UserMenuDesktop() {
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--secondary)] transition-colors"
             >
-              <User className="h-4 w-4" />
+              <User className="h-4 w-4" aria-hidden="true" />
               Profile
             </Link>
             <Link
@@ -79,7 +91,7 @@ export function UserMenuDesktop() {
               onClick={() => setOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--secondary)] transition-colors"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="h-4 w-4" aria-hidden="true" />
               Settings
             </Link>
             <button
@@ -89,7 +101,7 @@ export function UserMenuDesktop() {
               }}
               className="flex items-center gap-2 px-3 py-2 text-sm w-full text-left hover:bg-[var(--secondary)] transition-colors text-[var(--destructive)]"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4" aria-hidden="true" />
               Sign Out
             </button>
           </div>
@@ -99,6 +111,8 @@ export function UserMenuDesktop() {
       {/* Trigger */}
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-label="User menu"
         className={cn(
           "flex items-center gap-3 w-full rounded-lg px-3 py-2 text-sm transition-colors hover:bg-[var(--secondary)]",
           open && "bg-[var(--secondary)]"
@@ -113,7 +127,7 @@ export function UserMenuDesktop() {
           )}
         </div>
         <span className="flex-1 text-left truncate font-medium">{user.name || "User"}</span>
-        <ChevronUp className={cn("h-4 w-4 text-[var(--muted-foreground)] transition-transform", open ? "rotate-0" : "rotate-180")} />
+        <ChevronUp className={cn("h-4 w-4 text-[var(--muted-foreground)] transition-transform", open ? "rotate-0" : "rotate-180")} aria-hidden="true" />
       </button>
     </div>
   );
@@ -130,8 +144,8 @@ export function UserMenuMobile() {
   if (!session?.user) {
     return (
       <Button variant="ghost" size="sm" asChild>
-        <Link href="/auth/signin">
-          <LogIn className="h-4 w-4 mr-1" />
+        <Link href="/auth/signin" aria-label="Sign in">
+          <LogIn className="h-4 w-4 mr-1" aria-hidden="true" />
           <span className="text-xs">Sign In</span>
         </Link>
       </Button>
@@ -145,6 +159,7 @@ export function UserMenuMobile() {
       href="/profile"
       className="flex items-center gap-1.5"
       title={user.name || "Account"}
+      aria-label={`Profile: ${user.name || "Account"}`}
     >
       <div className="h-7 w-7 rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] flex items-center justify-center text-[10px] font-bold">
         {user.image ? (

@@ -645,3 +645,42 @@
 **2026-02-24 (Round 12 cross-agent — from Utah):** Fixed Docker Compose — replaced `db-migrate` full web build with lightweight `node:20-alpine` + volume-mounted Prisma schema. Added all missing env vars to docker-compose.yml. Made Playwright optional in pipeline Dockerfile. Built Facebook scraper with Graph API + public page dual strategy, condition extraction, river mention regex, 48-hour window. Password reset: `PasswordResetToken` model, `POST /api/auth/forgot-password` (anti-enumeration 200), `POST /api/auth/reset-password` (token + PBKDF2), `GET /api/auth/verify-email` (redirect). Created `web/src/lib/email.ts` (Resend, no-op without key). Security headers in `next.config.ts` (HSTS, X-Frame-Options, Permissions-Policy). Key files: `pipeline/scrapers/facebook.py`, `web/src/app/api/auth/forgot-password/route.ts`, `web/src/app/api/auth/reset-password/route.ts`, `web/src/app/api/auth/verify-email/route.ts`, `web/src/lib/email.ts`.
 
 **2026-02-24 (Round 12 cross-agent — from Pappas):** Replaced all 43 skipped Facebook scraper stubs with 110 real tests. Created `auth-password-reset.test.ts` (26), `email.test.ts` (19), `security-headers.test.ts` (9). Pipeline 746 passed, 0 skipped. Web 722. Grand total 1,468 with zero skipped. Email tests use `vi.resetModules()` for module re-import. Security headers tested via config import.
+
+**2026-02-24:** Round 13 — Admin User Management, Accessibility Audit, Keyboard Navigation:
+
+### Admin User Management Page (`web/src/app/admin/users/page.tsx`)
+- Protected by `AuthGuard` + client-side admin role check (non-admin sees "Access Denied" card)
+- Table of all users with columns: name, email, role, joined date (via `timeAgo()`), tracked river count (badge)
+- Search input with 300ms debounce filtering by name/email via `GET /api/admin/users`
+- Role dropdown: native `<select>` styled as pill badge, changes role via `PATCH /api/admin/users/[id]`
+- Users can't change their own role (dropdown disabled for current user)
+- Pagination: 10 per page, Previous/Next buttons, "Page X of Y" indicator
+- Responsive: full table on desktop, stacked cards on mobile
+- Loading skeleton matching table row shape, empty state for no results
+- Layout + loading.tsx for route metadata
+- Added `getAdminUsers()` and `updateAdminUserRole()` to `web/src/lib/api.ts`
+- Added "Users" (Users icon) to `authNavItems` in navigation, between Scrapers and Settings
+
+### Accessibility Improvements
+- **`aria-current="page"`**: Added to all active nav links in desktop sidebar, mobile sheet, and bottom tab bar
+- **`aria-live="polite"`**: Added to `ToastViewport` in `web/src/components/ui/toast.tsx` and notification bell dropdown
+- **`aria-label`**: Added to notification bell dropdown region, user menu button, mobile user avatar link, mobile sign-in link
+- **`aria-expanded`**: Added to user menu desktop trigger button
+- **`aria-hidden="true"`**: Added to all decorative icons in user menu (Profile, Settings, SignOut links, user avatar chevron), bottom tab bar icons, desktop sidebar nav link icons, mobile nav link icons
+- **Form labels audit**: Confirmed all forms (sign-in, register, add-river, edit-river, create-filter, review-form) use proper `<Label htmlFor>` associations
+- **Color contrast audit**: Verified badge colors meet WCAG AA — all use high-contrast pairings (e.g., `green-800` on `green-100`, `blue-900/200` in dark). Muted foreground `#64748b` on white = 5.1:1 ratio, `#94a3b8` on `#0a0a0a` = 7.5:1 ratio, both pass AA.
+- **Skip-to-content link**: Already existed in root layout (added in Round 3)
+- **`role="navigation"`**: Already present on bottom tab bar; `<nav>` elements have implicit role
+
+### Keyboard Navigation Enhancements
+- **Focus trap in search palette**: Added `useEffect`-based focus trap that wraps Tab/Shift+Tab within the palette container when open. Uses `querySelectorAll` for focusable elements and intercepts Tab at boundaries.
+- **`?` keyboard shortcut**: New `KeyboardShortcuts` component (`web/src/components/keyboard-shortcuts.tsx`) — full-screen overlay showing all shortcuts organized by group (Global, Navigation, Search Palette, Photo Gallery). Pressing `?` toggles it. Skips activation when typing in inputs/textareas.
+- **Escape key**: Added Escape handling to notification bell dropdown and user menu desktop dropdown. Search palette and photo gallery lightbox already had Escape support.
+- **Photo gallery lightbox**: Already supports arrow keys for navigation and Escape to close (implemented in Round 11).
+- **Tab order**: Forms use standard DOM order which matches visual layout. No tabindex overrides needed.
+
+### Component Index
+- Exported `KeyboardShortcuts` from `web/src/components/index.ts`
+
+### Build
+- `npx next build` passes: 42 static pages, all routes compile. Admin users page at `/admin/users`.

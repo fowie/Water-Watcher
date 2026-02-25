@@ -85,7 +85,7 @@ const SAMPLE_FAILED_LOG = {
 describe("GET /api/admin/scrapers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue({ user: { id: USER_ID } });
+    mockAuth.mockResolvedValue({ user: { id: USER_ID, role: "admin" } });
     // Default: all sources return empty data
     mockPrisma.scrapeLog.findMany.mockResolvedValue([]);
     mockPrisma.scrapeLog.findFirst.mockResolvedValue(null);
@@ -113,6 +113,26 @@ describe("GET /api/admin/scrapers", () => {
     const res = await GET(req);
 
     expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for non-admin user", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1", role: "user" } });
+
+    const req = mockRequest("http://localhost/api/admin/scrapers");
+    const res = await GET(req);
+    const data = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(data.error).toContain("Admin access required");
+  });
+
+  it("returns 403 when role is undefined (not admin)", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1" } });
+
+    const req = mockRequest("http://localhost/api/admin/scrapers");
+    const res = await GET(req);
+
+    expect(res.status).toBe(403);
   });
 
   it("returns scraper summary grouped by source", async () => {
@@ -285,7 +305,7 @@ describe("GET /api/admin/scrapers", () => {
 describe("GET /api/admin/scrapers/:source", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockAuth.mockResolvedValue({ user: { id: USER_ID } });
+    mockAuth.mockResolvedValue({ user: { id: USER_ID, role: "admin" } });
     mockPrisma.scrapeLog.findMany.mockResolvedValue([]);
     mockPrisma.scrapeLog.count.mockResolvedValue(0);
     mockPrisma.scrapeLog.aggregate.mockResolvedValue({
@@ -303,6 +323,17 @@ describe("GET /api/admin/scrapers/:source", () => {
 
     expect(res.status).toBe(401);
     expect(data.error).toContain("Authentication required");
+  });
+
+  it("returns 403 for non-admin user", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-1", role: "user" } });
+
+    const req = mockRequest("http://localhost/api/admin/scrapers/usgs");
+    const res = await GET_SOURCE(req, makeSourceContext("usgs"));
+    const data = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(data.error).toContain("Admin access required");
   });
 
   it("returns 400 for invalid source", async () => {

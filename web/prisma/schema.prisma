@@ -179,6 +179,7 @@ model User {
   passwordHash  String?   @map("password_hash")
   emailVerified DateTime? @map("email_verified")
   image         String?
+  role          String    @default("user") // "user" or "admin"
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 

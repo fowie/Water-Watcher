@@ -22,11 +22,13 @@ import {
   BarChart3,
   Search,
   Activity,
+  Users,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenuDesktop, UserMenuMobile } from "@/components/user-menu";
 import { NotificationBell } from "@/components/notification-bell";
 import { SearchPalette } from "@/components/search-palette";
+import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
 
 const publicNavItems = [
   { href: "/", label: "Home", icon: Home },
@@ -42,17 +44,20 @@ const authNavItems = [
   { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/export", label: "Export", icon: Download },
   { href: "/admin/scrapers", label: "Scrapers", icon: Activity },
+  { href: "/admin/users", label: "Users", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Navigation() {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   return (
     <>
       <DesktopNav onSearchOpen={() => setSearchOpen(true)} />
       <MobileNav onSearchOpen={() => setSearchOpen(true)} />
       <SearchPalette open={searchOpen} onOpenChange={setSearchOpen} />
+      <KeyboardShortcuts open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </>
   );
 }
@@ -90,6 +95,7 @@ function DesktopNav({ onSearchOpen }: { onSearchOpen: () => void }) {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 active
@@ -97,7 +103,7 @@ function DesktopNav({ onSearchOpen }: { onSearchOpen: () => void }) {
                   : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--secondary-foreground)]"
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" aria-hidden="true" />
               {item.label}
             </Link>
           );
@@ -188,6 +194,7 @@ function MobileNav({ onSearchOpen }: { onSearchOpen: () => void }) {
                     key={item.href}
                     href={item.href}
                     onClick={() => setSheetOpen(false)}
+                    aria-current={active ? "page" : undefined}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                       active
@@ -195,7 +202,7 @@ function MobileNav({ onSearchOpen }: { onSearchOpen: () => void }) {
                         : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--secondary-foreground)]"
                     )}
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon className="h-5 w-5" aria-hidden="true" />
                     {item.label}
                   </Link>
                 );
@@ -206,7 +213,7 @@ function MobileNav({ onSearchOpen }: { onSearchOpen: () => void }) {
       )}
 
       {/* Bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-[var(--border)] bg-[var(--background)]/95 backdrop-blur-sm z-40 flex items-center justify-around px-2" aria-label="Bottom tab bar">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 border-t border-[var(--border)] bg-[var(--background)]/95 backdrop-blur-sm z-40 flex items-center justify-around px-2" aria-label="Bottom tab bar" role="navigation">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active =
@@ -216,6 +223,7 @@ function MobileNav({ onSearchOpen }: { onSearchOpen: () => void }) {
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "flex flex-col items-center gap-0.5 px-3 py-1 rounded-md text-xs transition-colors",
                 active
@@ -223,7 +231,7 @@ function MobileNav({ onSearchOpen }: { onSearchOpen: () => void }) {
                   : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
               )}
             >
-              <Icon className={cn("h-5 w-5", active && "stroke-[2.5]")} />
+              <Icon className={cn("h-5 w-5", active && "stroke-[2.5]")} aria-hidden="true" />
               {item.label}
             </Link>
           );

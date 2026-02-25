@@ -39,7 +39,7 @@ export async function getCurrentUser() {
   const { auth } = await import("@/lib/auth");
   const session = await auth();
   if (!session?.user?.id) return null;
-  return session.user;
+  return session.user as { id: string; email?: string | null; name?: string | null; image?: string | null; role?: string };
 }
 
 /**
@@ -50,6 +50,20 @@ export async function requireAuth() {
   if (!user) {
     throw new Response(JSON.stringify({ error: "Authentication required" }), {
       status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  return user;
+}
+
+/**
+ * Require admin role — returns the user or throws a Response with 401/403.
+ */
+export async function requireAdmin() {
+  const user = await requireAuth();
+  if (user.role !== "admin") {
+    throw new Response(JSON.stringify({ error: "Admin access required" }), {
+      status: 403,
       headers: { "Content-Type": "application/json" },
     });
   }

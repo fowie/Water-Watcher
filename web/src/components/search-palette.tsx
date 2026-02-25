@@ -64,6 +64,7 @@ function saveRecentSearch(query: string) {
 export function SearchPalette({ open, onOpenChange }: SearchPaletteProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const paletteRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,6 +82,35 @@ export function SearchPalette({ open, onOpenChange }: SearchPaletteProps) {
       setResults([]);
       setSelectedIndex(0);
     }
+  }, [open]);
+
+  // Focus trap: keep focus within palette while open
+  useEffect(() => {
+    if (!open) return;
+    function handleFocusTrap(e: KeyboardEvent) {
+      if (e.key !== "Tab") return;
+      const container = paletteRef.current;
+      if (!container) return;
+      const focusable = container.querySelectorAll<HTMLElement>(
+        'input, button, [tabindex]:not([tabindex="-1"]), a[href]'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+    document.addEventListener("keydown", handleFocusTrap);
+    return () => document.removeEventListener("keydown", handleFocusTrap);
   }, [open]);
 
   // Global keyboard shortcut
@@ -192,7 +222,7 @@ export function SearchPalette({ open, onOpenChange }: SearchPaletteProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Search">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -200,7 +230,7 @@ export function SearchPalette({ open, onOpenChange }: SearchPaletteProps) {
       />
 
       {/* Palette */}
-      <div className="relative mx-auto mt-[15vh] w-full max-w-xl px-4">
+      <div ref={paletteRef} className="relative mx-auto mt-[15vh] w-full max-w-xl px-4">
         <div className="rounded-xl border border-[var(--border)] bg-[var(--background)] shadow-2xl overflow-hidden">
           {/* Search input */}
           <div className="flex items-center border-b border-[var(--border)] px-4">

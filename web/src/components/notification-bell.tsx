@@ -52,6 +52,18 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [open]);
+
   if (status !== "authenticated") return null;
 
   return (
@@ -71,10 +83,15 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className={cn(
-          "absolute z-50 mt-2 w-80 rounded-lg border border-[var(--border)] bg-[var(--background)] shadow-xl",
-          "right-0 md:right-auto md:left-0"
-        )}>
+        <div
+          className={cn(
+            "absolute z-50 mt-2 w-80 rounded-lg border border-[var(--border)] bg-[var(--background)] shadow-xl",
+            "right-0 md:right-auto md:left-0"
+          )}
+          role="region"
+          aria-label="Recent notifications"
+          aria-live="polite"
+        >
           <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between">
             <h3 className="text-sm font-semibold">Notifications</h3>
             {total > 0 && (

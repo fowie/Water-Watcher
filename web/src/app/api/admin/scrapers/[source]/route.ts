@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { apiError, handleApiError } from "@/lib/api-errors";
-import { withAuth } from "@/lib/api-middleware";
+import { requireAdmin, isAdminError } from "@/lib/admin";
 
 const VALID_SOURCES = ["usgs", "aw", "craigslist", "blm", "usfs"];
 
-export const GET = withAuth(async (
+export async function GET(
   _request: Request,
-  context?: unknown
-) => {
+  context: { params: Promise<{ source: string }> }
+) {
+  const adminResult = await requireAdmin();
+  if (isAdminError(adminResult)) return adminResult;
+
   try {
-    const { source } = await (context as { params: Promise<{ source: string }> }).params;
+    const { source } = await context.params;
 
     if (!VALID_SOURCES.includes(source)) {
       return apiError(400, `Invalid source. Must be one of: ${VALID_SOURCES.join(", ")}`);
@@ -67,4 +70,4 @@ export const GET = withAuth(async (
   } catch (error) {
     return handleApiError(error);
   }
-});
+}

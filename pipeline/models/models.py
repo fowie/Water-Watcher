@@ -32,6 +32,7 @@ class User(Base):
     id = Column(String, primary_key=True)
     email = Column(String, unique=True)
     name = Column(String)
+    role = Column(String, nullable=False, default="user")  # "user" or "admin"
     created_at = Column(DateTime, default=_utc_now)
     updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
 

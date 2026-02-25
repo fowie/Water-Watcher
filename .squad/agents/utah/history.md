@@ -503,3 +503,51 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 12 cross-agent — from Tyler):** Built password reset UI: forgot-password (email form, success confirmation regardless of email existence), reset-password (Zod validation, 5-segment password strength indicator, token error handling with Suspense boundary), verify-email (auto-fires on mount, 3-state machine, auto-redirect to sign-in after 3s). Added "Forgot password?" link on sign-in page. Complete README rewrite (37 endpoints, 13 categories, 22 env vars, ASCII architecture diagram, badges). Replaced PNG icon refs with SVG water-drop-on-mountain design. Created `offline.html` with inlined CSS matching dark theme. Updated SW PRECACHE_ASSETS. Extended seed script with Trip, 3 TripStops, 3 RiverReviews using upsert patterns.
 
 **2026-02-24 (Round 12 cross-agent — from Pappas):** Replaced all 43 skipped Facebook scraper stubs with 110 real tests. Created `auth-password-reset.test.ts` (26), `email.test.ts` (19), `security-headers.test.ts` (9). Pipeline 746 passed, 0 skipped. Web 722. Grand total 1,468 with zero skipped. Observations: `_classify_condition` relies on dict insertion order (correct per Python 3.7+), `_extract_river_mentions` only splits CamelCase hashtags, `_handle_rate_limit` caps Retry-After at 300s.
+
+**2026-02-24:** Round 13 — Admin Role System, Next.js Middleware, River Analytics API:
+
+### Admin Role System
+- Added `role` field to Prisma `User` model (default `"user"`, accepts `"user"` or `"admin"`)
+- Mirrored `role` column in SQLAlchemy `User` model (`pipeline/models/models.py`)
+- Updated `web/src/lib/auth.ts` JWT/session callbacks to include `role` — available as `session.user.role`
+- In `authorize()`, user's `role` is returned alongside `id`, `email`, `name`, `image`
+- JWT stores `token.role`, session callback copies it to `session.user.role`
+- Created `web/src/lib/admin.ts` — `requireAdmin()` returns session user if admin, NextResponse 401/403 if not; `isAdminError()` type guard for the return value
+- Updated `requireAuth()` in `auth-utils.ts` to include typed `role` in return type
+- Added `requireAdmin()` to `auth-utils.ts` as well (throws Response 401/403 pattern, for non-API contexts)
+- Gated admin scrapers API (`GET /api/admin/scrapers` and `GET /api/admin/scrapers/:source`) behind `requireAdmin()` — changed from `withAuth()` HOF to standalone `async function GET()` pattern
+- Created `POST /api/admin/users` — list users with search (name/email) and pagination (limit/offset), returns user counts (rivers, trips, reviews)
+- Created `PATCH /api/admin/users/[id]` — update user role with Zod validation, 404 for unknown user, self-demotion prevention
+- Updated scrapers test file to include `role: "admin"` in mock sessions
+
+### Next.js Middleware (`web/src/middleware.ts`)
+- Uses NextAuth.js v5 `auth()` as middleware wrapper — `export default auth((req) => { ... })`
+- Protected routes: `/trips`, `/settings`, `/profile`, `/alerts`, `/export`, `/rivers/favorites`, `/rivers/compare` — redirect to `/auth/signin?callbackUrl=...` when unauthenticated
+- Admin routes: `/admin/*` — redirect to signin if not authenticated, redirect to `/` if authenticated but not admin
+- Public routes: everything else (home, rivers, deals, map, search, stats, auth pages)
+- Matcher excludes API routes, `_next/static`, `_next/image`, `favicon.ico`, `manifest.json`, `sw.js`, `icons`, `offline.html`
+- Uses path prefix matching: `pathname.startsWith(route + "/")` for sub-routes
+
+### River Analytics API (`GET /api/rivers/[id]/analytics`)
+- Public endpoint (no auth required) — analytics are informational
+- Returns 404 if river not found
+- Flow rate trends: daily averages for last 30 days (avgFlowRate, avgGaugeHeight, avgWaterTemp per day)
+- Condition quality distribution: group-by count per quality level
+- Best time to visit: month with most excellent/good conditions historically
+- Review stats: total count and average rating via `prisma.riverReview.aggregate()`
+- Visit count: total trip stops referencing this river
+- All queries run in parallel via `Promise.all` for performance
+- Null-safe: handles rivers with no conditions, reviews, or trip stops
+
+### Test Results
+- Web: 885 passed (722 → 885, +163 new tests)
+- Pipeline: 746 passed (unchanged)
+- New test files: `admin-users.test.ts` (19), `river-analytics.test.ts` (9), `admin.test.ts` (7), `middleware.test.ts` (2)
+- Updated `scrapers.test.ts` — mock sessions now include `role: "admin"`
+
+### Key File Paths
+- `web/src/lib/admin.ts` — admin helper (requireAdmin, isAdminError)
+- `web/src/middleware.ts` — Next.js route protection middleware
+- `web/src/app/api/admin/users/route.ts` — list users (admin only)
+- `web/src/app/api/admin/users/[id]/route.ts` — update user role (admin only)
+- `web/src/app/api/rivers/[id]/analytics/route.ts` — river analytics
