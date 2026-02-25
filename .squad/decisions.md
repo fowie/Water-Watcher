@@ -591,3 +591,95 @@ Added 98 new tests across 3 files. Web: 387 → 485. Pipeline unchanged (636 + 4
 3. **GPX early validation** — GPX export rejects invalid `type` only inside `gpxExport()`, after `fetchExportData()` already queried the DB. Moving the check before the fetch avoids unnecessary queries.
 
 **Observation:** CSV export uses `# Rivers` section headers — `#` is not standard CSV and may confuse some parsers.
+
+---
+
+## BD-025: Trip Planner API Design
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Trip planner uses two models: `Trip` (container with status/dates) and `TripStop` (per-day river assignments). Stops are a sub-resource of trips rather than a separate top-level entity, matching REST conventions.
+
+**Status workflow:** `planning` → `active` → `completed` (or `cancelled` at any point). Default is `planning`. No automatic status transitions — client controls this via PATCH.
+
+**Access control:** Trips are private by default (`isPublic: false`). GET trip detail allows access to owner or any authenticated user if `isPublic: true`. List endpoint (`GET /api/trips`) only returns the authenticated user's own trips.
+
+**Stop validation:** Adding a stop validates that the referenced river exists (404 if not). Stops include `putInTime`/`takeOutTime` as simple `HH:MM` strings — not DateTime — because they represent planned times without timezone complexity.
+
+---
+
+## BD-026: River Reviews — One Per User Per River (Upsert Pattern)
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Reviews use a `@@unique([riverId, userId])` constraint enforcing one review per user per river. The POST endpoint uses `prisma.riverReview.upsert()` so submitting a review for a river you've already reviewed updates the existing one instead of returning a conflict error. This matches the UX pattern of "edit your review" rather than "you already reviewed this."
+
+GET reviews endpoint is public (no auth required) and includes paginated reviews with user info (id, name, image) plus an aggregate `averageRating` via `prisma.riverReview.aggregate()`.
+
+---
+
+## BD-027: In-Memory Rate Limiting with Token Bucket
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Rate limiting uses an in-memory token bucket algorithm rather than Redis or database-backed counters. Appropriate for single-instance deployment: no external dependencies, sub-millisecond per check.
+
+**Trade-offs:**
+- Rate limit state resets on server restart (acceptable for abuse prevention, not for billing)
+- Not shared across instances (would need Redis if scaling horizontally)
+- Memory growth bounded by stale entry cleanup (entries > 5min old purged every 60s)
+
+**Composition:** `withRateLimit(handler, config)` HOF composes with `withAuth()` — rate limit check runs first (before auth) so unauthenticated flood requests are rejected cheaply.
+
+**Applied limits:** Registration at 5/min (strict), review POST at 10/min (moderate). General API default is 60/min but not yet applied globally.
+
+**Testing:** Token bucket state persists across tests within a single vitest run. Tests for rate-limited endpoints must mock `@/lib/rate-limit` to avoid exhausting tokens.
+
+---
+
+## FE-016: Trip Planner Architecture
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Trip planner uses client-side filtering with tab buttons (All/Upcoming/Past/Cancelled) rather than server-side filtering, since trip counts per user are expected to be low. Trip detail page uses day-by-day card layout where each day's stops are grouped by `dayNumber` from the API. River selection for stops uses a reusable `RiverPickerDialog` with debounced search against `GET /api/rivers`.
+
+---
+
+## FE-017: Star Rating Component Design
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+`StarRating` display component uses filled, half-filled, and empty star icons from lucide-react for fractional ratings. Review form uses a simpler integer-only click-to-set star selector with hover preview. Both are inline (no external star rating library). `StarRating` is exported from `river-reviews.tsx` for reuse on the stats page.
+
+---
+
+## FE-018: Review Tab on River Detail Page
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Added Reviews as a 6th tab (grid-cols-6) on the river detail page rather than a separate section. Lazy-loads review data only when the user clicks the tab. Average rating fetched alongside river data via `Promise.all` and shown in the header area.
+
+---
+
+## FE-019: Stats Dashboard — CSS Donut Chart
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Condition quality breakdown uses a CSS `conic-gradient` donut chart with a transparent center (via `mask: radial-gradient`). No chart library dependency. Color scheme matches existing `qualityColor` utility — green (excellent), blue (good), yellow (fair), orange (poor), red (dangerous).
+
+---
+
+## FE-020: Stats Data Fetching Strategy
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Stats page uses `Promise.allSettled` to fetch data from 6 endpoints in parallel. Each section renders independently based on its own resolved/rejected state. Quality breakdown computed client-side from `RiverSummary` data rather than requiring a dedicated API endpoint.
+
+---
+
+## TST-007: Round 10 Test Coverage — Trips, Reviews, Rate Limiting
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+Added 87 new web tests (485 → 572) across 4 files:
+- `trips.test.ts` (30): Full CRUD for trip planner API with auth, ownership, and validation coverage.
+- `trip-stops.test.ts` (17): Add/remove trip stops with river existence validation, ownership checks, time format validation.
+- `reviews.test.ts` (20): Paginated GET (public), POST create/upsert with rating 1-5, rate limiting integration.
+- `rate-limit.test.ts` (20): Token bucket algorithm, refill timing, per-IP isolation, stale cleanup, withRateLimit middleware headers.
+
+Pipeline unchanged: 636 passed + 43 skipped. Grand total: 1,251.
+
+**BUG: tripUpdateSchema missing endDate >= startDate refinement** — `tripUpdateSchema` uses `.optional()` on all fields but has no `.refine()` to enforce `endDate >= startDate`. The create schema has this refinement but PATCH requests can set `endDate` before `startDate` without validation error. Fixed by Coordinator.
+
+**Observation:** Reviews GET route has no `sort` query parameter — always orders by `createdAt desc`. Sort by rating would require a `sort` param with `orderBy` switch.

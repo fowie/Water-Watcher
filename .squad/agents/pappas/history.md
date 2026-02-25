@@ -135,6 +135,12 @@
 
 **2026-02-24 (Round 9 cross-agent — from Coordinator):** Fixed all 3 bugs found this round: removed userId from SSE deal-match events, added clearInterval in cancel() callback, moved GPX type validation before fetchExportData().
 
+**2026-02-24 (Round 10 cross-agent — from Utah):** Built Trip Planner API: `Trip` + `TripStop` models, 7 endpoints, status workflow (planning/active/completed/cancelled), stop validation, `HH:MM` time strings. River Reviews API with `@@unique([riverId, userId])` upsert, paginated GET with `averageRating`. Rate limiting via in-memory token bucket (`rate-limit.ts`), `withRateLimit()` HOF. Applied to auth register (5/min) and review POST (10/min). All models mirrored in SQLAlchemy.
+
+**2026-02-24 (Round 10 cross-agent — from Tyler):** Trip planner pages (`/trips`, `/trips/[id]`) with create dialog, day-by-day itinerary, `RiverPickerDialog`. River reviews with `StarRating` (fractional stars) and `ReviewForm`, added as 6th tab on river detail. Stats dashboard (`/stats`) with CSS donut chart. `Promise.allSettled` for resilient fetching. Nav updated with Trips + Stats auth-only links.
+
+**2026-02-24 (Round 10 cross-agent — from Coordinator):** Fixed `tripUpdateSchema` date refinement bug — added `.refine()` for `endDate >= startDate` when both fields present in PATCH.
+
 **2026-02-24:** Round 10 — Test coverage for Trip Planner, River Reviews, and Rate Limiting. Four new test files (87 new tests):
 - `trips.test.ts` (30 tests): GET list with auth/status/upcoming filters, POST create with validation (missing name, endDate before startDate, invalid status), defaults (status=planning, isPublic), GET by ID with stops+river details, 404/403/401 for non-existent/non-owner/unauthenticated, public trip access by non-owner, PATCH owner-only update with status/name fields, DELETE owner-only with 204/403/404.
 - `trip-stops.test.ts` (17 tests): POST add stop with river validation, 400 for missing riverId/invalid dayNumber/bad time format, 404 for missing trip/river, 403 for non-owner, optional notes/putInTime/takeOutTime, DELETE stop with 204/404 (non-existent, wrong trip), 403 non-owner.

@@ -468,3 +468,9 @@
 
 ### Component Index Updates
 - Exported: `TripCard`, `RiverPickerDialog`, `RiverReviews`, `StarRating`, `ReviewForm`
+
+**2026-02-24 (Round 10 cross-agent — from Utah):** Built Trip Planner API with `Trip` + `TripStop` models: 7 endpoints (`GET/POST /api/trips`, `GET/PATCH/DELETE /api/trips/:id`, `POST /api/trips/:id/stops`, `DELETE /api/trips/:id/stops/:stopId`). Status workflow: planning → active → completed (or cancelled). River Reviews API with `@@unique([riverId, userId])` upsert pattern, paginated GET with `averageRating`. Rate limiting middleware (`rate-limit.ts`) — in-memory token bucket, `withRateLimit()` HOF composable with `withAuth()`. Applied to auth register (5/min) and review POST (10/min). All models mirrored in SQLAlchemy.
+
+**2026-02-24 (Round 10 cross-agent — from Pappas):** 87 new web tests (485→572): trips (30), trip stops (17), reviews (20), rate limiting (20). Grand total 1,251. Found `tripUpdateSchema` missing `endDate >= startDate` refinement. Also observed reviews GET has no sort parameter.
+
+**2026-02-24 (Round 10 cross-agent — from Coordinator):** Fixed `tripUpdateSchema` date refinement bug — added `.refine()` for `endDate >= startDate` on PATCH when both fields present.

@@ -404,3 +404,9 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 ### Test Results
 - Web: 485 passed (no regressions, auth test mock added)
 - Pipeline: 636 passed, 43 skipped (no regressions)
+
+**2026-02-24 (Round 10 cross-agent — from Tyler):** Built trip planner pages (`/trips`, `/trips/[id]`) with create dialog, day-by-day itinerary, `RiverPickerDialog` for adding stops, inline editing, status transitions. River reviews component (`river-reviews.tsx`) with `StarRating` (filled/half/empty stars) and `ReviewForm` dialog — added as 6th tab on river detail. Stats dashboard (`/stats`) with CSS `conic-gradient` donut chart. All pages use `Promise.allSettled`. Nav updated with Trips + Stats auth-only links.
+
+**2026-02-24 (Round 10 cross-agent — from Pappas):** 87 new web tests (485→572): trips (30), trip stops (17), reviews (20), rate limiting (20). Grand total 1,251. Found `tripUpdateSchema` missing `endDate >= startDate` refinement — fixed by Coordinator. Also noted reviews GET lacks sort parameter.
+
+**2026-02-24 (Round 10 cross-agent — from Coordinator):** Fixed `tripUpdateSchema` date refinement bug — added `.refine()` to enforce `endDate >= startDate` when both fields present in PATCH.
