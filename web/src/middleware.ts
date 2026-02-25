@@ -41,10 +41,18 @@ function isAdminRoute(pathname: string): boolean {
   );
 }
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isLoggedIn = !!req.auth?.user;
-  const userRole = (req.auth?.user as { role?: string } | undefined)?.role;
+
+  // Public routes — skip auth entirely (no auth() call = no UntrustedHost risk)
+  if (!isProtectedRoute(pathname) && !isAdminRoute(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Only call auth() for routes that actually need it
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
 
   // Admin routes: need auth + admin role
   if (isAdminRoute(pathname)) {
@@ -60,18 +68,14 @@ export default auth((req) => {
   }
 
   // Protected routes: need auth
-  if (isProtectedRoute(pathname)) {
-    if (!isLoggedIn) {
-      const signInUrl = new URL("/auth/signin", req.nextUrl.origin);
-      signInUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(signInUrl);
-    }
-    return NextResponse.next();
+  if (!isLoggedIn) {
+    const signInUrl = new URL("/auth/signin", req.nextUrl.origin);
+    signInUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(signInUrl);
   }
 
-  // All other routes are public
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [
