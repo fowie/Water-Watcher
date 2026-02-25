@@ -499,3 +499,7 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 ### Test Results
 - Web: 668 passed (no regressions)
 - Pipeline: 636 passed, 43 skipped (no regressions)
+
+**2026-02-24 (Round 12 cross-agent — from Tyler):** Built password reset UI: forgot-password (email form, success confirmation regardless of email existence), reset-password (Zod validation, 5-segment password strength indicator, token error handling with Suspense boundary), verify-email (auto-fires on mount, 3-state machine, auto-redirect to sign-in after 3s). Added "Forgot password?" link on sign-in page. Complete README rewrite (37 endpoints, 13 categories, 22 env vars, ASCII architecture diagram, badges). Replaced PNG icon refs with SVG water-drop-on-mountain design. Created `offline.html` with inlined CSS matching dark theme. Updated SW PRECACHE_ASSETS. Extended seed script with Trip, 3 TripStops, 3 RiverReviews using upsert patterns.
+
+**2026-02-24 (Round 12 cross-agent — from Pappas):** Replaced all 43 skipped Facebook scraper stubs with 110 real tests. Created `auth-password-reset.test.ts` (26), `email.test.ts` (19), `security-headers.test.ts` (9). Pipeline 746 passed, 0 skipped. Web 722. Grand total 1,468 with zero skipped. Observations: `_classify_condition` relies on dict insertion order (correct per Python 3.7+), `_extract_river_mentions` only splits CamelCase hashtags, `_handle_rate_limit` caps Retry-After at 300s.

@@ -774,3 +774,84 @@ Added 96 new web tests across 3 files. Web: 572 → 668. Pipeline unchanged (636
 - Search route's `type=all` silently skips trips when user is unauthenticated — correct behavior but undocumented for API consumers.
 - Scraper stats `VALID_SOURCES` array is case-sensitive — "USGS" returns 400. This is consistent but could trip up API callers.
 - River photos POST uses `withRateLimit(withAuth(...))` composition — rate limit check runs before auth, so unauthenticated flood requests consume rate limit tokens.
+
+---
+
+## BD-031: Docker Compose Lightweight Migration
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Replaced the `db-migrate` service from building the full web Dockerfile (target: builder) to using a lightweight `node:20-alpine` image with volume-mounted Prisma schema. This avoids needing `pnpm build` (which requires DATABASE_URL at build time) just to run `prisma db push --skip-generate`. Dummy DATABASE_URL build arg added to web Dockerfile for the builder stage.
+
+---
+
+## BD-032: Facebook Scraper Dual Strategy
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Facebook scraper uses Graph API when `FACEBOOK_ACCESS_TOKEN` is configured, falls back to public mobile site scraping otherwise. Graph API provides structured data (timestamps, author, images), while public scraping is best-effort with limited data. Source priority remains 30 (lowest) per BD-002. Scheduled every 6 hours (configurable via `FACEBOOK_INTERVAL_MINUTES`).
+
+---
+
+## BD-033: Password Reset Token Model
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Created separate `PasswordResetToken` model rather than reusing `VerificationToken`. The VerificationToken model uses `identifier` (email) + `token` as its compound key and has no primary `id` field, making it awkward for password reset workflows that need deletion by token alone. The new model has its own `id`, `email`, `token` (unique), and `expires` fields. Tokens expire in 1 hour. Anti-enumeration: forgot-password always returns 200 regardless of email existence.
+
+---
+
+## BD-034: Security Headers via Next.js Config
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, X-XSS-Protection, Permissions-Policy, HSTS) added via `next.config.ts` `headers()` function. Applied to all routes `/(.*).` HSTS set to 1 year with includeSubDomains. Geolocation permitted for self (needed for map features), camera and microphone denied.
+
+---
+
+## BD-035: Playwright Optional in Docker
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Made Playwright browser install optional in pipeline Dockerfile (`|| echo "skipped"`). Playwright is only needed for JavaScript-heavy scraping targets, and its installation (Chromium + deps) adds significant image size and can fail in constrained environments. Current scrapers (USGS, AW, Craigslist, BLM, USFS, Facebook) all use httpx + BeautifulSoup.
+
+---
+
+## BD-036: Email Utility for Web (Resend)
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Created `web/src/lib/email.ts` with `sendPasswordResetEmail()` and `sendVerificationEmail()` functions. Uses Resend API via direct `fetch()` (no SDK dependency). Graceful no-op when `RESEND_API_KEY` is not configured — logs warning but never crashes. Matches the pattern established in the pipeline's `EmailNotifier`.
+
+---
+
+## FE-025: Password Reset & Email Verification Auth Flow
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Three new auth pages at `/auth/forgot-password`, `/auth/reset-password`, and `/auth/verify-email`. Forgot Password shows confirmation regardless of email existence (anti-enumeration). Reset Password uses Zod validation with password strength indicator (5-segment bar). Email Verification auto-fires on mount with three-state machine (loading → success/error), auto-redirects to sign-in after 3 seconds. Added "Forgot password?" link on sign-in page.
+
+---
+
+## FE-026: Comprehensive README Overhaul
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Complete rewrite of `README.md` to reflect all features from Rounds 1–12. Covers 37 API endpoints, 13 feature categories, 22 environment variables, and 17 tech stack entries. Badges at top, ASCII architecture diagram, API table with Auth column, environment variables as table with Required/Default columns.
+
+---
+
+## FE-027: PWA SVG Icons & Offline Page
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Replaced placeholder PNG icon references with SVG icons using water-drop-on-mountain design with sky-blue gradients. Manifest updated to `type: "image/svg+xml"`. Offline page (`web/public/offline.html`) is static HTML with all CSS inlined, matching app dark theme. Service worker `PRECACHE_ASSETS` updated to include `/offline.html` and new icon paths.
+
+---
+
+## FE-028: Seed Script — Trips & Reviews
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Extended `web/prisma/seed.ts` with sample Trip ("Gore Canyon Weekend"), 3 TripStops, and 3 RiverReviews. Trip uses upsert with stable `id: "demo-trip"`, stops use deleteMany + createMany, reviews use upsert on `riverId_userId` compound unique. All new seed data references existing demo user and demo rivers.
+
+---
+
+## TST-009: Round 12 Test Coverage — Facebook Scraper, Password Reset, Email, Security
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+Replaced all 43 skipped Facebook scraper test stubs with 110 working tests. Created 3 new web test files: `auth-password-reset.test.ts` (26), `email.test.ts` (19), `security-headers.test.ts` (9). Pipeline: 636 → 746 passed, 43 → 0 skipped. Web: 668 → 722. Grand total: 1,468. Zero skipped tests in entire project.
+
+**Patterns:** Email tests use `vi.resetModules()` for module re-import due to env var reads at module scope. Security headers tested via direct config import. Facebook scraper tests use `respx` + pre-set `_river_cache` to avoid DB calls.
+
+**Observations:** Facebook `_classify_condition` uses dict insertion order for keyword priority (correct per Python 3.7+). `_extract_river_mentions` hashtag handling only splits CamelCase. `_handle_rate_limit` caps Retry-After at 300 seconds.

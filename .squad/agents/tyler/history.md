@@ -641,3 +641,7 @@
 ### Build
 - `npx next build` passes cleanly — all new auth routes compile as static pages
 - No TypeScript errors
+
+**2026-02-24 (Round 12 cross-agent — from Utah):** Fixed Docker Compose — replaced `db-migrate` full web build with lightweight `node:20-alpine` + volume-mounted Prisma schema. Added all missing env vars to docker-compose.yml. Made Playwright optional in pipeline Dockerfile. Built Facebook scraper with Graph API + public page dual strategy, condition extraction, river mention regex, 48-hour window. Password reset: `PasswordResetToken` model, `POST /api/auth/forgot-password` (anti-enumeration 200), `POST /api/auth/reset-password` (token + PBKDF2), `GET /api/auth/verify-email` (redirect). Created `web/src/lib/email.ts` (Resend, no-op without key). Security headers in `next.config.ts` (HSTS, X-Frame-Options, Permissions-Policy). Key files: `pipeline/scrapers/facebook.py`, `web/src/app/api/auth/forgot-password/route.ts`, `web/src/app/api/auth/reset-password/route.ts`, `web/src/app/api/auth/verify-email/route.ts`, `web/src/lib/email.ts`.
+
+**2026-02-24 (Round 12 cross-agent — from Pappas):** Replaced all 43 skipped Facebook scraper stubs with 110 real tests. Created `auth-password-reset.test.ts` (26), `email.test.ts` (19), `security-headers.test.ts` (9). Pipeline 746 passed, 0 skipped. Web 722. Grand total 1,468 with zero skipped. Email tests use `vi.resetModules()` for module re-import. Security headers tested via config import.
