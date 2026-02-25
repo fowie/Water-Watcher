@@ -234,3 +234,49 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 7 cross-agent — from Tyler):** Built profile page (`/profile`), river comparison view (`/rivers/compare`), favorites page (`/rivers/favorites`), and `GET/POST/DELETE /api/user/rivers`. Star button on river cards toggles tracking. Compare mode with checkbox selection (max 3). Navigation: "My Rivers" auth-only link, "Profile" in user menu. 20 routes, build clean.
 
 **2026-02-24 (Round 7 cross-agent — from Pappas):** 204 new tests: BLM scraper 88 (replaced skipped stubs), USFS scraper 71, user profile 22, user rivers 23. Pipeline 566+43 skipped, Web 345, total 954. Discovered BLM advisory type map ordering quirk and river name extraction greedy regex issue — documented as observations.
+
+**2026-02-24:** Implemented email notifications (Resend), OAuth providers, notification preferences, and alert history:
+
+### Email Notifier (`pipeline/notifiers/email_notifier.py`)
+- `EmailNotifier` class using Resend API with 4 methods: `send_deal_alert`, `send_condition_alert`, `send_hazard_alert`, `send_weekly_digest`
+- Inline HTML templates with responsive CSS (no template engine dependency)
+- Graceful skip when `RESEND_API_KEY` is not configured (same pattern as push notifier)
+- Added `resend>=2.0,<3.0` to `requirements.txt`
+- Settings already had `resend_api_key` and `notification_from_email`
+
+### Pipeline Wiring (`pipeline/main.py`)
+- `EmailNotifier` instantiated alongside `PushNotifier` in all 3 scraper jobs
+- Helper functions: `_get_email_recipients()` checks NotificationPreference per user — only sends if channel is "email" or "both" AND the specific alert type is enabled
+- `_send_condition_emails()` and `_send_deal_emails()` dispatch to tracked river users
+- All email dispatch wrapped in try/except to never break the scraping pipeline
+
+### Notification Preferences (Prisma + SQLAlchemy)
+- Prisma: `NotificationPreference` model with channel ("push"/"email"/"both"), per-type booleans (dealAlerts, conditionAlerts, hazardAlerts, weeklyDigest), unique on userId
+- Prisma: `AlertLog` model for tracking sent notifications (type, channel, title, body, metadata JSON)
+- SQLAlchemy: mirrored both models; `AlertLog.extra_data` maps to column named "metadata" (SQLAlchemy reserves `metadata` as attribute name)
+- User model updated with `notification_preferences` (one-to-one) and `alert_logs` (one-to-many) relationships
+
+### Notification Preferences API (`web/src/app/api/user/notifications/route.ts`)
+- GET: returns prefs, auto-creates defaults (push channel, all alerts on, digest off) if none exist
+- PATCH: validates channel enum + boolean fields, upserts to handle first-time + update in one call
+- Both protected with `withAuth()`
+- Client functions: `getNotificationPreferences()`, `updateNotificationPreferences()` in `api.ts`
+
+### Alert History API (`web/src/app/api/alerts/route.ts`)
+- GET: paginated list of past alerts, optional `type` filter, sorted by sentAt desc
+- Limit clamped 1–100, offset >= 0
+- Protected with `withAuth()`
+- Client functions: `getAlerts()` in `api.ts` with `AlertLogRecord` and `AlertsResponse` types
+
+### OAuth Providers (`web/src/lib/auth.ts`)
+- Added Google and GitHub providers alongside existing Credentials provider
+- `allowDangerousEmailAccountLinking: true` on both OAuth providers so users can link OAuth to existing email accounts
+- Env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_ID`, `GITHUB_SECRET` added to `.env.example`
+- Prisma adapter already handles Account model for OAuth account storage
+
+### Gotcha
+- SQLAlchemy reserves `metadata` as a class attribute on declarative models. Used `extra_data = Column("metadata", JSON)` to map Python attr `extra_data` to DB column `metadata`, keeping Prisma schema and DB column name unchanged.
+
+### Test Results
+- Pipeline: 566 passed, 43 skipped (unchanged)
+- Web: 345 passed (unchanged)

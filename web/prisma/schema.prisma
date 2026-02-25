@@ -184,6 +184,8 @@ model User {
   trackedRivers UserRiver[]
   dealFilters   DealFilter[]
   pushSubs      PushSubscription[]
+  notificationPreference NotificationPreference?
+  alertLogs     AlertLog[]
 
   @@map("users")
 }
@@ -270,4 +272,42 @@ model ScrapeLog {
 
   @@index([source, startedAt])
   @@map("scrape_logs")
+}
+
+// ─── Notification Preferences ──────────────────────────
+
+model NotificationPreference {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  channel         String   @default("push") // "push", "email", "both"
+  dealAlerts      Boolean  @default(true) @map("deal_alerts")
+  conditionAlerts Boolean  @default(true) @map("condition_alerts")
+  hazardAlerts    Boolean  @default(true) @map("hazard_alerts")
+  weeklyDigest    Boolean  @default(false) @map("weekly_digest")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@map("notification_preferences")
+}
+
+// ─── Alert History ────────────────────────────────────
+
+model AlertLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  type      String   // "deal", "condition", "hazard", "digest"
+  channel   String   // "push", "email"
+  title     String
+  body      String?
+  metadata  Json?    // extra context (river_id, deal_ids, etc.)
+  sentAt    DateTime @map("sent_at") @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt])
+  @@map("alert_logs")
 }

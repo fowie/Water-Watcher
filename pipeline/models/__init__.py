@@ -10,6 +10,8 @@ from models.models import (
     PushSubscription,
     UserRiver,
     ScrapeLog,
+    NotificationPreference,
+    AlertLog,
 )
 
 __all__ = [
@@ -27,4 +29,6 @@ __all__ = [
     "PushSubscription",
     "UserRiver",
     "ScrapeLog",
+    "NotificationPreference",
+    "AlertLog",
 ]

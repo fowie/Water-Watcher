@@ -219,6 +219,66 @@ export async function subscribePush(
   });
 }
 
+// ─── Notification Preferences ───────────────────────────
+
+export interface NotificationPreferences {
+  id: string;
+  userId: string;
+  channel: "push" | "email" | "both";
+  dealAlerts: boolean;
+  conditionAlerts: boolean;
+  hazardAlerts: boolean;
+  weeklyDigest: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getNotificationPreferences(): Promise<NotificationPreferences> {
+  return fetcher<NotificationPreferences>("/api/user/notifications");
+}
+
+export async function updateNotificationPreferences(
+  data: Partial<Omit<NotificationPreferences, "id" | "userId" | "createdAt" | "updatedAt">>
+): Promise<NotificationPreferences> {
+  return fetcher<NotificationPreferences>("/api/user/notifications", {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── Alert History ──────────────────────────────────────
+
+export interface AlertLogRecord {
+  id: string;
+  type: "deal" | "condition" | "hazard" | "digest";
+  channel: "push" | "email";
+  title: string;
+  body: string | null;
+  metadata: Record<string, unknown> | null;
+  sentAt: string;
+  createdAt: string;
+}
+
+export interface AlertsResponse {
+  alerts: AlertLogRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export async function getAlerts(params?: {
+  type?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<AlertsResponse> {
+  const sp = new URLSearchParams();
+  if (params?.type) sp.set("type", params.type);
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  const q = sp.toString();
+  return fetcher<AlertsResponse>(`/api/alerts${q ? `?${q}` : ""}`);
+}
+
 // ─── Helpers ────────────────────────────────────────────
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

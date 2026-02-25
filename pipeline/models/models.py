@@ -38,6 +38,8 @@ class User(Base):
     tracked_rivers = relationship("UserRiver", back_populates="user")
     deal_filters = relationship("DealFilter", back_populates="user")
     push_subscriptions = relationship("PushSubscription", back_populates="user")
+    notification_preferences = relationship("NotificationPreference", back_populates="user", uselist=False)
+    alert_logs = relationship("AlertLog", back_populates="user")
 
 
 class River(Base):
@@ -204,4 +206,40 @@ class ScrapeLog(Base):
 
     __table_args__ = (
         Index("ix_scrape_logs_source_started", "source", "started_at"),
+    )
+
+
+class NotificationPreference(Base):
+    __tablename__ = "notification_preferences"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    channel = Column(String, nullable=False, default="push")  # "push", "email", "both"
+    deal_alerts = Column(Boolean, default=True)
+    condition_alerts = Column(Boolean, default=True)
+    hazard_alerts = Column(Boolean, default=True)
+    weekly_digest = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
+
+    user = relationship("User", back_populates="notification_preferences")
+
+
+class AlertLog(Base):
+    __tablename__ = "alert_logs"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String, nullable=False)  # "deal", "condition", "hazard", "digest"
+    channel = Column(String, nullable=False)  # "push", "email"
+    title = Column(String, nullable=False)
+    body = Column(Text)
+    extra_data = Column("metadata", JSON)  # extra context (river_id, deal_ids, etc.)
+    sent_at = Column(DateTime, nullable=False, default=_utc_now)
+    created_at = Column(DateTime, default=_utc_now)
+
+    user = relationship("User", back_populates="alert_logs")
+
+    __table_args__ = (
+        Index("ix_alert_logs_user_sent", "user_id", "sent_at"),
     )

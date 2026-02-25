@@ -292,3 +292,49 @@
 **2026-02-24 (Round 7 cross-agent — from Utah):** Created BLM + USFS scrapers on 6-hour schedule (`run_land_agency_scrapers()`). BLM scraper: recreation API + RSS feed, advisory classification. USFS scraper: RIDB API with key gating. Created `GET/PATCH /api/user/profile` with `withAuth()`, duplicate-email check, riverCount/filterCount. New settings: `BLM_BASE_URL`, `RIDB_API_KEY`, `LAND_AGENCY_INTERVAL_MINUTES`.
 
 **2026-02-24 (Round 7 cross-agent — from Pappas):** 204 new tests covering all Round 7 features. User profile tests (22): GET/PATCH, validation, auth. User rivers tests (23): GET/POST/DELETE, duplicates, auth. BLM (88) and USFS (71) scraper tests. Total: 954 tests.
+
+**2026-02-24:** OAuth sign-in buttons, notification preferences UI, alert history page, and notification bell:
+
+### OAuth Sign-In Buttons (`web/src/app/auth/signin/page.tsx`, `web/src/app/auth/register/page.tsx`)
+- Added "Continue with Google" (white bg, Google logo SVG) and "Continue with GitHub" (dark bg, GitHub logo SVG) buttons
+- Full-width, placed above the email/password form
+- Visual "or" divider separator between OAuth and credentials sections
+- Google button uses `signIn("google", { callbackUrl })`, GitHub uses `signIn("github", { callbackUrl })`
+- Same OAuth buttons added to registration page
+
+### Notification Preferences Section (`web/src/app/settings/page.tsx`)
+- New `GlobalNotificationPreferences` component added between existing deal filter toggles and Data Management
+- Channel selector: Push / Email / Both — radio group style buttons with icons (Smartphone, Mail, Bell)
+- Toggle switches for: Deal Alerts, Condition Alerts, Hazard Alerts, Weekly Digest — each with description text
+- Save button enabled only when changes are detected (dirty checking against fetched state)
+- Fetches current preferences via `GET /api/user/notifications` on mount
+- Saves via `PATCH /api/user/notifications`
+- Toast notifications on save success/error
+
+### Alert History Page (`web/src/app/alerts/page.tsx`)
+- Protected route at `/alerts` wrapped in `AuthGuard`
+- Filter tabs: All, Deals, Conditions, Hazards — pill-style toggle buttons
+- Alert cards show: type icon (emoji badge with colored background), title, body, timestamp via `timeAgo()`
+- Type badges: Deal (blue/ShoppingBag), Condition (green/Droplets), Hazard (red/AlertTriangle), Digest (purple/Bell)
+- Paginated with "Load More" button showing remaining count
+- Empty state with appropriate messaging per filter
+- Layout file exports metadata `{ title: "Alerts" }`
+
+### Notification Bell Component (`web/src/components/notification-bell.tsx`)
+- Bell icon with unread count badge (red dot with number, "99+" for >99)
+- Clicking opens dropdown with 5 most recent alerts
+- Each alert shows type emoji, title, truncated body, relative timestamp
+- "View All Alerts" link to `/alerts`
+- Polls every 60 seconds for updates
+- Placed in desktop sidebar (above user menu) and mobile top header (before user menu)
+- Only renders when authenticated via `useSession()`
+- Close on outside click via `mousedown` listener
+
+### Navigation Updates (`web/src/components/navigation.tsx`)
+- Added "Alerts" to `authNavItems` list (Bell icon, `/alerts`)
+- `NotificationBell` added to desktop sidebar and mobile header
+- Component index updated to export `NotificationBell`
+
+### API Client (`web/src/lib/api.ts`)
+- Confirmed existing functions: `getNotificationPreferences()`, `updateNotificationPreferences()`, `getAlerts()`
+- `NotificationPreferences` and `AlertLogRecord` interfaces already present from prior round

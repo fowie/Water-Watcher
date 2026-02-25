@@ -11,7 +11,9 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/empty-state";
 import { AuthGuard } from "@/components/auth-guard";
-import { getDealFilters, updateDealFilter } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { getDealFilters, updateDealFilter, getNotificationPreferences, updateNotificationPreferences } from "@/lib/api";
+import type { NotificationPreferences as NotifPrefs } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import {
   Settings,
@@ -22,6 +24,9 @@ import {
   RefreshCw,
   ExternalLink,
   Filter,
+  Mail,
+  Smartphone,
+  Save,
 } from "lucide-react";
 import type { DealFilterRecord } from "@/types";
 
@@ -51,6 +56,8 @@ function SettingsContent() {
       </div>
 
       <NotificationPreferences userId={userId} />
+      <Separator />
+      <GlobalNotificationPreferences />
       <Separator />
       <DataManagement />
       <Separator />
@@ -194,6 +201,216 @@ function NotificationPreferences({ userId }: { userId: string }) {
             </Card>
           ))}
         </div>
+      )}
+    </section>
+  );
+}
+
+/* ─── Global Notification Preferences ────────────────── */
+
+function GlobalNotificationPreferences() {
+  const [prefs, setPrefs] = useState<NotifPrefs | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [localPrefs, setLocalPrefs] = useState({
+    channel: "push" as "push" | "email" | "both",
+    dealAlerts: true,
+    conditionAlerts: true,
+    hazardAlerts: true,
+    weeklyDigest: false,
+  });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await getNotificationPreferences();
+        setPrefs(data);
+        setLocalPrefs({
+          channel: data.channel,
+          dealAlerts: data.dealAlerts,
+          conditionAlerts: data.conditionAlerts,
+          hazardAlerts: data.hazardAlerts,
+          weeklyDigest: data.weeklyDigest,
+        });
+      } catch {
+        // If the endpoint fails, we'll show defaults
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const data = await updateNotificationPreferences(localPrefs);
+      setPrefs(data);
+      toast({
+        title: "Preferences saved",
+        description: "Your notification preferences have been updated.",
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to save preferences",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isDirty =
+    prefs &&
+    (localPrefs.channel !== prefs.channel ||
+      localPrefs.dealAlerts !== prefs.dealAlerts ||
+      localPrefs.conditionAlerts !== prefs.conditionAlerts ||
+      localPrefs.hazardAlerts !== prefs.hazardAlerts ||
+      localPrefs.weeklyDigest !== prefs.weeklyDigest);
+
+  const channelOptions: { value: "push" | "email" | "both"; label: string; icon: typeof Bell }[] = [
+    { value: "push", label: "Push", icon: Smartphone },
+    { value: "email", label: "Email", icon: Mail },
+    { value: "both", label: "Both", icon: Bell },
+  ];
+
+  return (
+    <section aria-labelledby="global-notif-heading">
+      <div className="flex items-center gap-2 mb-4">
+        <Mail className="h-5 w-5 text-[var(--primary)]" aria-hidden="true" />
+        <h2 id="global-notif-heading" className="text-lg font-semibold">
+          Notification Settings
+        </h2>
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-48 rounded-lg" />
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-5 space-y-5">
+            {/* Channel Selector */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Notification Channel</Label>
+              <div className="flex gap-2 flex-wrap" role="radiogroup" aria-label="Notification channel">
+                {channelOptions.map((opt) => {
+                  const Icon = opt.icon;
+                  return (
+                    <button
+                      key={opt.value}
+                      role="radio"
+                      aria-checked={localPrefs.channel === opt.value}
+                      onClick={() =>
+                        setLocalPrefs((p) => ({ ...p, channel: opt.value }))
+                      }
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors",
+                        localPrefs.channel === opt.value
+                          ? "bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]"
+                          : "bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:bg-[var(--secondary)]"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Alert Type Toggles */}
+            <div className="space-y-4">
+              <Label className="text-sm font-medium">Alert Types</Label>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium">Deal Alerts</span>
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    Gear deals matching your filters
+                  </p>
+                </div>
+                <Switch
+                  checked={localPrefs.dealAlerts}
+                  onCheckedChange={(checked) =>
+                    setLocalPrefs((p) => ({ ...p, dealAlerts: checked }))
+                  }
+                  aria-label="Toggle deal alerts"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium">Condition Alerts</span>
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    River condition changes and updates
+                  </p>
+                </div>
+                <Switch
+                  checked={localPrefs.conditionAlerts}
+                  onCheckedChange={(checked) =>
+                    setLocalPrefs((p) => ({ ...p, conditionAlerts: checked }))
+                  }
+                  aria-label="Toggle condition alerts"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium">Hazard Alerts</span>
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    New hazards reported on tracked rivers
+                  </p>
+                </div>
+                <Switch
+                  checked={localPrefs.hazardAlerts}
+                  onCheckedChange={(checked) =>
+                    setLocalPrefs((p) => ({ ...p, hazardAlerts: checked }))
+                  }
+                  aria-label="Toggle hazard alerts"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-sm font-medium">Weekly Digest</span>
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    Summary of river conditions and deals each week
+                  </p>
+                </div>
+                <Switch
+                  checked={localPrefs.weeklyDigest}
+                  onCheckedChange={(checked) =>
+                    setLocalPrefs((p) => ({ ...p, weeklyDigest: checked }))
+                  }
+                  aria-label="Toggle weekly digest"
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex justify-end">
+              <Button onClick={handleSave} disabled={saving || !isDirty}>
+                {saving ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Saving…
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Save className="h-4 w-4" aria-hidden="true" />
+                    Save Preferences
+                  </span>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </section>
   );

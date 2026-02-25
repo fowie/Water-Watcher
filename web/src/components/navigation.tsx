@@ -15,9 +15,11 @@ import {
   X,
   Settings,
   Star,
+  Bell,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserMenuDesktop, UserMenuMobile } from "@/components/user-menu";
+import { NotificationBell } from "@/components/notification-bell";
 
 const publicNavItems = [
   { href: "/", label: "Home", icon: Home },
@@ -27,6 +29,7 @@ const publicNavItems = [
 
 const authNavItems = [
   { href: "/rivers/favorites", label: "My Rivers", icon: Star },
+  { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -78,7 +81,10 @@ function DesktopNav() {
         })}
       </nav>
 
-      {/* User menu + theme toggle */}
+      {/* Notification bell + User menu + theme toggle */}
+      <div className="px-6 py-2 flex justify-end">
+        <NotificationBell />
+      </div>
       <UserMenuDesktop />
       <div className="px-6 py-3 border-t border-[var(--border)] flex items-center justify-between">
         <p className="text-xs text-[var(--muted-foreground)]">
@@ -106,6 +112,7 @@ function MobileNav() {
           <span className="font-bold text-lg">Water-Watcher</span>
         </div>
         <div className="flex items-center gap-1">
+          <NotificationBell />
           <UserMenuMobile />
           <ThemeToggle />
           <Button
