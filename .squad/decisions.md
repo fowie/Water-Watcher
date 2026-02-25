@@ -855,3 +855,55 @@ Replaced all 43 skipped Facebook scraper test stubs with 110 working tests. Crea
 **Patterns:** Email tests use `vi.resetModules()` for module re-import due to env var reads at module scope. Security headers tested via direct config import. Facebook scraper tests use `respx` + pre-set `_river_cache` to avoid DB calls.
 
 **Observations:** Facebook `_classify_condition` uses dict insertion order for keyword priority (correct per Python 3.7+). `_extract_river_mentions` hashtag handling only splits CamelCase. `_handle_rate_limit` caps Retry-After at 300 seconds.
+---
+
+## BD-037: Admin Role System — JWT-Based Role Propagation
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Added `role` field to User model (Prisma canonical, SQLAlchemy mirror). Role values: `"user"` (default), `"admin"`. Propagated through NextAuth ecosystem: `authorize()` returns role, JWT callback stores `token.role`, session callback copies to `session.user.role`. `requireAdmin()` helper checks session role, returns 401/403 NextResponse.
+
+**Trade-off:** Role is read from DB only at sign-in time and cached in JWT. Role changes don't take effect until JWT expires or user re-authenticates. Acceptable at current scale. Self-demotion prevention: PATCH `/api/admin/users/[id]` prevents admins from removing their own admin role.
+
+---
+
+## BD-038: Next.js Middleware for Server-Side Route Protection
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Created `web/src/middleware.ts` using NextAuth.js v5's `auth()` wrapper. Server-side redirects replace client-side-only AuthGuard as primary gate — faster UX, no flash of protected content. Protected routes redirect to `/auth/signin?callbackUrl=...`. Admin routes redirect non-admins to `/`. Public routes pass through. Matcher excludes API routes (they have their own auth), static assets, and PWA files.
+
+---
+
+## BD-039: River Analytics API — Query-Time Aggregation
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+`GET /api/rivers/[id]/analytics` computes all analytics at query time: flow trends (daily averages), quality distribution (groupBy), best time to visit (month with most excellent/good), reviews (count + avg rating), visits (tripStop count). All five queries run in parallel via `Promise.all`. Public endpoint (no auth). Acceptable because per-river analytics are low-traffic and data volume per river is bounded.
+
+---
+
+## FE-029: Admin User Management Pattern
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Admin user management page at `/admin/users` uses client-side admin role check (`session.user.role`) rather than middleware-level gating. Role dropdown uses native `<select>` over Radix Select — better accessibility for simple two-option choice. Users cannot change their own role (self-demotion prevention). Server-side authorization enforced by API (`PATCH /api/admin/users/[id]`).
+
+---
+
+## FE-030: Keyboard Shortcuts Overlay Component
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+`KeyboardShortcuts` component renders full-screen overlay of all shortcuts, triggered by `?` key (except in inputs/textareas/selects). Mounted at Navigation level alongside SearchPalette. Uses same visual pattern (fixed overlay with backdrop, rounded card).
+
+---
+
+## FE-031: Accessibility Standards Applied
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Comprehensive accessibility audit: all icon-only buttons have `aria-label`, decorative icons have `aria-hidden="true"`, active nav links use `aria-current="page"`, toast viewport has `aria-live="polite"`, expandable elements have `aria-expanded`, dropdowns close on Escape, search palette has focus trap, badge colors verified WCAG AA (4.5:1 minimum).
+
+---
+
+## TST-010: Round 13 Test Coverage — Admin, Middleware, Analytics, Accessibility
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+Added 163 new web tests (722 → 885) across 6 files: `admin-users.test.ts` (+15), `middleware.test.ts` (35, was 2), `river-analytics.test.ts` (+9), `lib/admin.test.ts` (22), `accessibility.test.ts` (42), `scrapers.test.ts` (+3). 0 bugs found. Pipeline 746 unchanged. Grand total: 1,631.
+
+**Observations:** Middleware redirects non-admin to `/` (correct UX for page nav, differs from API 403 pattern). Admin users `POST /api/admin/users` uses `Number(body.limit) || 20` — `limit=0` silently becomes 20 (same pattern as alerts route).

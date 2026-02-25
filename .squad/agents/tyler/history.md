@@ -684,3 +684,6 @@
 
 ### Build
 - `npx next build` passes: 42 static pages, all routes compile. Admin users page at `/admin/users`.
+**2026-02-24 (Round 13 cross-agent — from Utah):** Added admin role system: `role` field on User model, `requireAdmin()` helper in `web/src/lib/admin.ts`, admin user management API (`POST /api/admin/users` for listing, `PATCH /api/admin/users/[id]` for role changes). Created Next.js middleware (`web/src/middleware.ts`) for server-side route protection — protected routes redirect to signin, admin routes redirect non-admins to `/`. Built river analytics API (`GET /api/rivers/[id]/analytics`) with parallel queries for flow trends, quality distribution, best time to visit, review stats, visit count. Key files: `web/src/lib/admin.ts`, `web/src/middleware.ts`, `web/src/app/api/admin/users/route.ts`, `web/src/app/api/rivers/[id]/analytics/route.ts`.
+
+**2026-02-24 (Round 13 cross-agent — from Pappas):** 163 new web tests (722 → 885). Covered admin users, middleware route protection, river analytics, requireAdmin, accessibility (42 tests verifying aria attributes via source file reads). 0 bugs found. Grand total: 1,631 tests.

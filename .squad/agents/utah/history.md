@@ -551,3 +551,6 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 - `web/src/app/api/admin/users/route.ts` — list users (admin only)
 - `web/src/app/api/admin/users/[id]/route.ts` — update user role (admin only)
 - `web/src/app/api/rivers/[id]/analytics/route.ts` — river analytics
+**2026-02-24 (Round 13 cross-agent — from Tyler):** Built admin user management page at `/admin/users` — table with search/pagination, native `<select>` for role changes, self-demotion prevention (dropdown disabled for current user). Created `KeyboardShortcuts` overlay (triggered by `?`). Comprehensive accessibility audit: `aria-current="page"` on active nav links, `aria-live="polite"` on toast viewport, `aria-expanded` on expandable elements, focus trap in search palette, WCAG AA color contrast verification. Added `getAdminUsers()` and `updateAdminUserRole()` to `api.ts`. Key file: `web/src/app/admin/users/page.tsx`.
+
+**2026-02-24 (Round 13 cross-agent — from Pappas):** 163 new web tests (722 → 885). Covered admin users API (search, pagination, role changes, self-demotion prevention), middleware (public/protected/admin route behavior), river analytics (flow trends, quality distribution, best time, reviews, visits), requireAdmin helper (401/403 cases), accessibility (aria attributes verified via source file reads). 0 bugs found. Grand total: 1,631 tests.
