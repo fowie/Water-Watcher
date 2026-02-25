@@ -5,7 +5,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile || pnpm install
+RUN pnpm install --frozen-lockfile --shamefully-hoist || pnpm install --shamefully-hoist
 
 # ─── Stage 2: Build the application ───────────────────────
 FROM node:20-alpine AS builder
