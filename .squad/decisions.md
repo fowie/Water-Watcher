@@ -292,3 +292,55 @@ Fixes for two bugs reported by Pappas (QA-001):
 2. **RSS parser ElementTree truthiness** — Replaced `or`-based element lookups with explicit `is None` checks in Craigslist `_scrape_rss`. ElementTree elements with no children are falsy in Python, breaking truthiness-based patterns.
 
 All 278 pipeline tests pass after both fixes.
+
+---
+
+## BD-015: Docker Production Configuration
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Four services in Docker Compose: `postgres` (PostgreSQL 16 Alpine), `db-migrate` (runs Prisma migrations, exits), `web` (Next.js standalone), `pipeline` (Python scrapers). Migration service uses builder stage from web Dockerfile and runs `prisma db push --skip-generate`. Both web and pipeline depend on successful migration before starting.
+
+- **Web Dockerfile:** Multi-stage (deps → builder → runner). Uses pnpm with `--frozen-lockfile`. Standalone output mode. Production image runs as non-root `nextjs` user. Prisma client copied into production stage.
+- **Pipeline Dockerfile:** Single stage, Python 3.12-slim. Installs system deps for psycopg2 and lxml compilation. Installs Playwright chromium for JS-rendered pages.
+- All env vars use `${VAR:-default}` syntax in compose file so `.env` file is optional for basic local usage. Docker internal hostname is `postgres` (service name), not `localhost`.
+
+---
+
+## BD-016: GitHub Actions CI Workflow
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Four parallel jobs: `web-test` (vitest), `web-build` (next build for type errors), `web-lint` (eslint), `pipeline-test` (pytest). All use official setup actions with caching. Triggers on push to main/dev and PRs. Prisma generate runs before all web jobs since tests and build import Prisma client.
+
+---
+
+## BD-017: README Overhaul
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Comprehensive README with: project description, feature list, tech stack table, Docker quick start, local dev setup, VAPID key generation, project structure, complete API endpoint table (13 routes), testing commands, architecture diagram, contributing guide, MIT license.
+
+---
+
+## FE-007: Error Boundaries, Loading Skeletons & Search Filters
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Used Next.js App Router file conventions (`error.tsx`, `loading.tsx`, `not-found.tsx`) for error boundaries and loading states at both global and per-route levels.
+
+- **Global error boundary** (`app/error.tsx`): "use client" component with `reset()` retry and dashboard fallback link.
+- **Per-route boundaries**: rivers/[id] has its own `error.tsx` and `not-found.tsx` with route-specific messaging.
+- **Loading skeletons**: Each route group has `loading.tsx` with skeleton grids matching the card layout shape.
+- **River search filters**: Difficulty filter chips (client-side, `useMemo`), sort dropdown (Name A–Z / Recently Updated / Most Hazards). Chip colors match `RapidRating` color scheme.
+- **Metadata**: Open Graph tags, Twitter card, emoji favicon via SVG data URL trick (🏞️).
+
+---
+
+## QA-002: Round 5 Test Coverage & Bug Discoveries
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Pappas
+
+Added 166 tests across 5 files. Pipeline: 278 → 407. Web: 199 → 236. Total: 643.
+
+**Bugs found:**
+1. **USGS scraper lacks broad exception handling** — Only catches `httpx.HTTPError`. Non-numeric values ("Ice"), missing `sourceInfo`, and non-JSON responses cause uncaught `ValueError`, `KeyError`, `JSONDecodeError`.
+2. **`_find_river()` only supports usgs/aw sources** — Sources in `SOURCE_PRIORITY` (blm, usfs, facebook) have no lookup logic; items from those sources are silently skipped.
+3. **`classify_runnability(inf)` returns None** — Dangerous range uses `< inf` upper bound, so `inf < inf` is False. Logically incomplete.
+
+All three bugs were fixed by the Coordinator in Round 5.

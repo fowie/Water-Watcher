@@ -155,3 +155,9 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 
 ### .env.example
 - Added Docker Compose DATABASE_URL comment showing `postgres` as hostname instead of `localhost`.
+
+**2026-02-24 (Round 5 cross-agent — from Tyler):** Error boundaries and loading skeletons added at global and per-route levels. Difficulty filter chips and sort dropdown on rivers page (client-side). Open Graph metadata and emoji favicon added.
+
+**2026-02-24 (Round 5 cross-agent — from Pappas):** 166 new tests (pipeline 278→407, web 199→236). Found 3 bugs: USGS non-numeric crash, _find_river drops non-usgs/aw sources, classify_runnability(inf)=None. All fixed by Coordinator.
+
+**2026-02-24 (Round 5 cross-agent — from Coordinator):** Fixed USGS error handling (broad try/except), _find_river name-based fallback, runnability inclusive upper bound. Updated 4 tests.

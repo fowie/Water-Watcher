@@ -75,3 +75,9 @@
 - `api-client.test.ts` (37 tests): All API client functions mocked with fetch. Verified URLs, methods, headers, error handling, query param encoding. `deleteRiver` and `getHealth` use raw `fetch` (not the `fetcher` helper), so they have different header behavior.
 - Final counts: **pipeline 407 tests** (was 278), **web 236 tests** (was 199).
 - **Bugs identified:** (1) USGS scraper lacks error handling for non-numeric values, missing fields, and non-JSON responses; (2) `_find_river()` only handles usgs/aw sources, making blm/usfs/facebook conditions dead code; (3) `classify_runnability(inf)` returns None due to half-open range boundary.
+
+**2026-02-24 (Round 5 cross-agent — from Utah):** Docker multi-service setup (web + pipeline Dockerfiles, 4-service compose), GitHub Actions CI (4 parallel jobs), comprehensive README rewrite.
+
+**2026-02-24 (Round 5 cross-agent — from Tyler):** Error boundaries and loading skeletons (global + per-route), difficulty filter chips and sort dropdown on rivers page, Open Graph metadata, emoji favicon.
+
+**2026-02-24 (Round 5 cross-agent — from Coordinator):** Fixed all 3 bugs found this round: USGS broad error handling, _find_river name-based fallback, runnability inclusive upper bound. Updated 4 tests.

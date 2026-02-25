@@ -189,3 +189,9 @@
 - Added Twitter card metadata
 - Emoji favicon via SVG data URL trick (🏞️ landscape emoji)
 - `metadataBase` set from `NEXT_PUBLIC_BASE_URL` env var with localhost fallback
+
+**2026-02-24 (Round 5 cross-agent — from Utah):** Docker multi-service setup (web + pipeline Dockerfiles, 4-service compose), GitHub Actions CI (4 parallel jobs), comprehensive README rewrite, .env.example updates.
+
+**2026-02-24 (Round 5 cross-agent — from Pappas):** 166 new tests (pipeline 278→407, web 199→236, total 643). Found 3 bugs in pipeline; all fixed by Coordinator.
+
+**2026-02-24 (Round 5 cross-agent — from Coordinator):** Fixed USGS error handling, _find_river name fallback, classify_runnability inclusive bound. Updated 4 tests.
