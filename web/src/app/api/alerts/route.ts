@@ -13,8 +13,10 @@ export const GET = withAuth(async (request: Request) => {
     const userId = request.headers.get("x-user-id")!;
     const { searchParams } = new URL(request.url);
 
-    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") ?? "20", 10) || 20, 1), 100);
-    const offset = Math.max(parseInt(searchParams.get("offset") ?? "0", 10) || 0, 0);
+    const parsedLimit = parseInt(searchParams.get("limit") ?? "20", 10);
+    const limit = Math.min(Math.max(Number.isFinite(parsedLimit) ? parsedLimit : 20, 1), 100);
+    const parsedOffset = parseInt(searchParams.get("offset") ?? "0", 10);
+    const offset = Math.max(Number.isFinite(parsedOffset) ? parsedOffset : 0, 0);
     const type = searchParams.get("type"); // "deal", "condition", "hazard", "digest"
 
     const where: Record<string, unknown> = { userId };
