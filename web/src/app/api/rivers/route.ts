@@ -3,8 +3,9 @@ import { prisma } from "@/lib/db";
 import { riverSchema } from "@/lib/validations";
 import { handleApiError } from "@/lib/api-errors";
 import { withAuth } from "@/lib/api-middleware";
+import { withETag } from "@/lib/etag";
 
-export async function GET(request: Request) {
+export const GET = withETag(async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const state = searchParams.get("state");
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
   } catch (error) {
     return handleApiError(error);
   }
-}
+});
 
 export const POST = withAuth(async (request: Request) => {
   try {

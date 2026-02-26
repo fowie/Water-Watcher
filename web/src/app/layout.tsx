@@ -3,6 +3,7 @@ import "./globals.css";
 import { Navigation } from "@/components/navigation";
 import { Toaster } from "@/components/toaster";
 import { SessionProvider } from "@/components/session-provider";
+import { NetworkStatus } from "@/components/network-status";
 
 export const metadata: Metadata = {
   title: {
@@ -54,6 +55,7 @@ export default function RootLayout({
           >
             Skip to content
           </a>
+          <NetworkStatus />
           <Navigation />
           {/* Desktop: offset by sidebar width. Mobile: offset by header/bottom nav */}
           <div id="main-content" className="md:pl-64 pt-14 md:pt-0 pb-20 md:pb-0 min-h-screen" role="main">

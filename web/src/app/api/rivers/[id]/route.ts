@@ -3,13 +3,14 @@ import { prisma } from "@/lib/db";
 import { riverUpdateSchema } from "@/lib/validations";
 import { apiError, handleApiError } from "@/lib/api-errors";
 import { withAuth } from "@/lib/api-middleware";
+import { withETag } from "@/lib/etag";
 
-export async function GET(
+export const GET = withETag(async function GET(
   _request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context?: unknown
 ) {
   try {
-    const { id } = await params;
+    const { id } = await (context as { params: Promise<{ id: string }> }).params;
 
     const river = await prisma.river.findUnique({
       where: { id },
@@ -40,7 +41,7 @@ export async function GET(
   } catch (error) {
     return handleApiError(error);
   }
-}
+});
 
 export const PATCH = withAuth(async (
   request: Request,

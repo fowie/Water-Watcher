@@ -4,6 +4,7 @@ import { reviewSchema } from "@/lib/validations";
 import { apiError, handleApiError } from "@/lib/api-errors";
 import { withAuth, withRateLimit } from "@/lib/api-middleware";
 import { reviewConfig } from "@/lib/rate-limit";
+import { sanitizeHtml, truncate } from "@/lib/sanitize";
 
 export async function GET(
   request: Request,
@@ -84,6 +85,8 @@ export const POST = withRateLimit(
       const { visitDate, ...rest } = parsed.data;
       const data = {
         ...rest,
+        ...(rest.title ? { title: truncate(sanitizeHtml(rest.title), 200) } : {}),
+        body: truncate(sanitizeHtml(rest.body), 5000),
         ...(visitDate ? { visitDate: new Date(visitDate) } : {}),
       };
 

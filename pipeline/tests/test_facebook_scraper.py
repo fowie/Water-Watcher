@@ -34,33 +34,50 @@ from scrapers.base import BaseScraper, ScrapedItem
 from config.settings import settings
 
 
+# ─── Dynamic timestamp helpers ──────────────────────────────
+
+def _recent_ts(hours_ago: int = 1) -> str:
+    """Return an ISO 8601 timestamp `hours_ago` hours in the past (always inside the 48-h window)."""
+    return (datetime.now(timezone.utc) - timedelta(hours=hours_ago)).strftime("%Y-%m-%dT%H:%M:%S+0000")
+
+
+def _old_ts() -> str:
+    """Return a timestamp well outside the 48-h scrape window."""
+    return (datetime.now(timezone.utc) - timedelta(days=60)).strftime("%Y-%m-%dT%H:%M:%S+0000")
+
+
 # ─── Sample Graph API responses ─────────────────────────────
 
-SAMPLE_GRAPH_RESPONSE = {
-    "data": [
-        {
-            "id": "post-1",
-            "message": "Great day on the Colorado River! Flow was about 12,000 cfs. Conditions are excellent.",
-            "created_time": "2026-02-24T10:00:00+0000",
-            "from": {"name": "River Runner Joe", "id": "user-1"},
-            "full_picture": "https://example.com/photo1.jpg",
-            "permalink_url": "https://www.facebook.com/page/posts/post-1",
-        },
-        {
-            "id": "post-2",
-            "message": "Salmon River is running low, very bony. Gauge at 3.5 ft stage. Water temp: 55\u00b0F",
-            "created_time": "2026-02-24T08:00:00+0000",
-            "from": {"name": "Kayaker Kate", "id": "user-2"},
-            "permalink_url": "https://www.facebook.com/page/posts/post-2",
-        },
-        {
-            "id": "post-3",
-            "message": "Just had lunch at the taco stand. No rivers involved.",
-            "created_time": "2026-02-24T06:00:00+0000",
-            "from": {"name": "Random Person", "id": "user-3"},
-        },
-    ]
-}
+def _make_graph_response():
+    return {
+        "data": [
+            {
+                "id": "post-1",
+                "message": "Great day on the Colorado River! Flow was about 12,000 cfs. Conditions are excellent.",
+                "created_time": _recent_ts(2),
+                "from": {"name": "River Runner Joe", "id": "user-1"},
+                "full_picture": "https://example.com/photo1.jpg",
+                "permalink_url": "https://www.facebook.com/page/posts/post-1",
+            },
+            {
+                "id": "post-2",
+                "message": "Salmon River is running low, very bony. Gauge at 3.5 ft stage. Water temp: 55\u00b0F",
+                "created_time": _recent_ts(4),
+                "from": {"name": "Kayaker Kate", "id": "user-2"},
+                "permalink_url": "https://www.facebook.com/page/posts/post-2",
+            },
+            {
+                "id": "post-3",
+                "message": "Just had lunch at the taco stand. No rivers involved.",
+                "created_time": _recent_ts(6),
+                "from": {"name": "Random Person", "id": "user-3"},
+            },
+        ]
+    }
+
+
+# Lazy-evaluated module-level reference (regenerated each test run)
+SAMPLE_GRAPH_RESPONSE = _make_graph_response()
 
 SAMPLE_GRAPH_EMPTY = {"data": []}
 
@@ -68,7 +85,7 @@ SAMPLE_GRAPH_NO_MESSAGE = {
     "data": [
         {
             "id": "post-no-msg",
-            "created_time": "2026-02-24T10:00:00+0000",
+            "created_time": _recent_ts(1),
             "from": {"name": "Silent Bob"},
             "full_picture": "https://example.com/photo-only.jpg",
         },
@@ -80,7 +97,7 @@ SAMPLE_GRAPH_OLD_POST = {
         {
             "id": "old-post",
             "message": "Colorado River trip from last month was amazing!",
-            "created_time": "2026-01-01T10:00:00+0000",
+            "created_time": _old_ts(),
             "from": {"name": "Old Timer"},
         },
     ]
@@ -548,7 +565,7 @@ class TestFacebookPostParsing:
 
     def test_from_as_non_dict(self):
         """Handles 'from' field that is not a dict."""
-        posts = [{"id": "x", "message": "Colorado River trip", "from": "string-val", "created_time": "2026-02-24T10:00:00Z"}]
+        posts = [{"id": "x", "message": "Colorado River trip", "from": "string-val", "created_time": _recent_ts(1)}]
         items = self.scraper._parse_posts(posts, "page")
         assert len(items) == 1
         assert items[0].data["author"] == ""
@@ -561,7 +578,7 @@ class TestFacebookPostParsing:
         """A post that causes an error should be skipped, not crash the whole batch."""
         posts = [
             None,  # This will cause an exception
-            {"id": "good", "message": "Colorado River today!", "from": {}, "created_time": "2026-02-24T10:00:00Z"},
+            {"id": "good", "message": "Colorado River today!", "from": {}, "created_time": _recent_ts(1)},
         ]
         items = self.scraper._parse_posts(posts, "page")
         # The None should be skipped, the good post parsed

@@ -15,28 +15,29 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock auth as a pass-through wrapper: auth(callback) returns callback itself.
-// This lets us call the middleware callback directly with mock requests.
+// Mock session state — tests set this before calling middleware
+let mockSession: { user: { id: string; role?: string } } | null = null;
+
+// Mock auth to return the session (standalone call, not a wrapper)
 vi.mock("@/lib/auth", () => ({
-  auth: (callback: Function) => callback,
+  auth: vi.fn(() => Promise.resolve(mockSession)),
 }));
 
-// Import the middleware. With the mock above, default export IS the callback.
+// Import the middleware. It's now a regular async function.
 import middleware, { config } from "@/middleware";
 
 /**
- * Create a mock request simulating what NextAuth's auth() wrapper provides.
- * The real wrapper attaches `req.auth` with the session data.
+ * Create a mock NextRequest.
  */
-function createReq(
-  pathname: string,
-  session: { user: { id: string; role?: string } } | null = null
-) {
+function createReq(pathname: string) {
   const url = new URL(`http://localhost${pathname}`);
   return {
     nextUrl: url,
-    auth: session,
   } as any;
+}
+
+function setSession(session: { user: { id: string; role?: string } } | null) {
+  mockSession = session;
 }
 
 function adminUser() {
@@ -47,103 +48,123 @@ function regularUser() {
   return { user: { id: "user-1", role: "user" } };
 }
 
+beforeEach(() => {
+  mockSession = null;
+});
+
 describe("Middleware — public routes", () => {
-  it("allows access to / without auth", () => {
-    const res = middleware(createReq("/", null));
-    // NextResponse.next() sets x-middleware-next header; it's NOT a redirect
+  it("allows access to / without auth", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows access to /rivers without auth", () => {
-    const res = middleware(createReq("/rivers", null));
+  it("allows access to /rivers without auth", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/rivers"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows access to /deals without auth", () => {
-    const res = middleware(createReq("/deals", null));
+  it("allows access to /deals without auth", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/deals"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows access to /map without auth", () => {
-    const res = middleware(createReq("/map", null));
+  it("allows access to /map without auth", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/map"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows access to /rivers/some-id without auth (non-protected sub-path)", () => {
-    const res = middleware(createReq("/rivers/river-123", null));
+  it("allows access to /rivers/some-id without auth (non-protected sub-path)", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/rivers/river-123"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows access to /auth/signin without auth", () => {
-    const res = middleware(createReq("/auth/signin", null));
+  it("allows access to /auth/signin without auth", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/auth/signin"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows access to /search without auth", () => {
-    const res = middleware(createReq("/search", null));
+  it("allows access to /search without auth", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/search"));
     expect(res.status).not.toBe(307);
   });
 });
 
 describe("Middleware — protected routes (unauthenticated)", () => {
-  it("redirects /trips to /auth/signin", () => {
-    const res = middleware(createReq("/trips", null));
+  it("redirects /trips to /auth/signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/trips"));
     expect(res.status).toBe(307);
     const location = res.headers.get("location") ?? "";
     expect(location).toContain("/auth/signin");
   });
 
-  it("redirects /settings to /auth/signin", () => {
-    const res = middleware(createReq("/settings", null));
+  it("redirects /settings to /auth/signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/settings"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/signin");
   });
 
-  it("redirects /profile to /auth/signin", () => {
-    const res = middleware(createReq("/profile", null));
+  it("redirects /profile to /auth/signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/profile"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/signin");
   });
 
-  it("redirects /alerts to /auth/signin", () => {
-    const res = middleware(createReq("/alerts", null));
+  it("redirects /alerts to /auth/signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/alerts"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/signin");
   });
 
-  it("redirects /export to /auth/signin", () => {
-    const res = middleware(createReq("/export", null));
+  it("redirects /export to /auth/signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/export"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/signin");
   });
 
-  it("redirects /rivers/favorites to /auth/signin", () => {
-    const res = middleware(createReq("/rivers/favorites", null));
+  it("redirects /rivers/favorites to /auth/signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/rivers/favorites"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/signin");
   });
 
-  it("redirects /rivers/compare to /auth/signin", () => {
-    const res = middleware(createReq("/rivers/compare", null));
+  it("redirects /rivers/compare to /auth/signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/rivers/compare"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/signin");
   });
 
-  it("redirects protected sub-paths (e.g., /trips/trip-123)", () => {
-    const res = middleware(createReq("/trips/trip-123", null));
+  it("redirects protected sub-paths (e.g., /trips/trip-123)", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/trips/trip-123"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/signin");
   });
 
-  it("sets callbackUrl query param on redirect", () => {
-    const res = middleware(createReq("/trips", null));
+  it("sets callbackUrl query param on redirect", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/trips"));
     const location = res.headers.get("location") ?? "";
     const url = new URL(location);
     expect(url.searchParams.get("callbackUrl")).toBe("/trips");
   });
 
-  it("sets callbackUrl for sub-path", () => {
-    const res = middleware(createReq("/trips/abc", null));
+  it("sets callbackUrl for sub-path", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/trips/abc"));
     const location = res.headers.get("location") ?? "";
     const url = new URL(location);
     expect(url.searchParams.get("callbackUrl")).toBe("/trips/abc");
@@ -151,30 +172,35 @@ describe("Middleware — protected routes (unauthenticated)", () => {
 });
 
 describe("Middleware — protected routes (authenticated)", () => {
-  it("allows authenticated user to access /trips", () => {
-    const res = middleware(createReq("/trips", regularUser()));
+  it("allows authenticated user to access /trips", async () => {
+    setSession(regularUser());
+    const res = await middleware(createReq("/trips"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows authenticated user to access /settings", () => {
-    const res = middleware(createReq("/settings", regularUser()));
+  it("allows authenticated user to access /settings", async () => {
+    setSession(regularUser());
+    const res = await middleware(createReq("/settings"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows authenticated user to access /alerts", () => {
-    const res = middleware(createReq("/alerts", regularUser()));
+  it("allows authenticated user to access /alerts", async () => {
+    setSession(regularUser());
+    const res = await middleware(createReq("/alerts"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows authenticated user to access /rivers/favorites", () => {
-    const res = middleware(createReq("/rivers/favorites", regularUser()));
+  it("allows authenticated user to access /rivers/favorites", async () => {
+    setSession(regularUser());
+    const res = await middleware(createReq("/rivers/favorites"));
     expect(res.status).not.toBe(307);
   });
 });
 
 describe("Middleware — admin routes", () => {
-  it("redirects unauthenticated user from /admin to signin", () => {
-    const res = middleware(createReq("/admin", null));
+  it("redirects unauthenticated user from /admin to signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/admin"));
     expect(res.status).toBe(307);
     const location = res.headers.get("location") ?? "";
     expect(location).toContain("/auth/signin");
@@ -182,58 +208,66 @@ describe("Middleware — admin routes", () => {
     expect(url.searchParams.get("callbackUrl")).toBe("/admin");
   });
 
-  it("redirects unauthenticated user from /admin/scrapers to signin", () => {
-    const res = middleware(createReq("/admin/scrapers", null));
+  it("redirects unauthenticated user from /admin/scrapers to signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/admin/scrapers"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/signin");
   });
 
-  it("redirects unauthenticated user from /admin/users to signin", () => {
-    const res = middleware(createReq("/admin/users", null));
+  it("redirects unauthenticated user from /admin/users to signin", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/admin/users"));
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/auth/signin");
   });
 
-  it("redirects non-admin authenticated user from /admin to home (/)", () => {
-    const res = middleware(createReq("/admin", regularUser()));
+  it("redirects non-admin authenticated user from /admin to home (/)", async () => {
+    setSession(regularUser());
+    const res = await middleware(createReq("/admin"));
     expect(res.status).toBe(307);
     const location = res.headers.get("location") ?? "";
     const url = new URL(location);
     expect(url.pathname).toBe("/");
   });
 
-  it("redirects non-admin from /admin/scrapers to home", () => {
-    const res = middleware(createReq("/admin/scrapers", regularUser()));
+  it("redirects non-admin from /admin/scrapers to home", async () => {
+    setSession(regularUser());
+    const res = await middleware(createReq("/admin/scrapers"));
     expect(res.status).toBe(307);
     const url = new URL(res.headers.get("location") ?? "");
     expect(url.pathname).toBe("/");
   });
 
-  it("redirects non-admin from /admin/users to home", () => {
-    const res = middleware(createReq("/admin/users", regularUser()));
+  it("redirects non-admin from /admin/users to home", async () => {
+    setSession(regularUser());
+    const res = await middleware(createReq("/admin/users"));
     expect(res.status).toBe(307);
     const url = new URL(res.headers.get("location") ?? "");
     expect(url.pathname).toBe("/");
   });
 
-  it("allows admin user to access /admin", () => {
-    const res = middleware(createReq("/admin", adminUser()));
+  it("allows admin user to access /admin", async () => {
+    setSession(adminUser());
+    const res = await middleware(createReq("/admin"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows admin user to access /admin/scrapers", () => {
-    const res = middleware(createReq("/admin/scrapers", adminUser()));
+  it("allows admin user to access /admin/scrapers", async () => {
+    setSession(adminUser());
+    const res = await middleware(createReq("/admin/scrapers"));
     expect(res.status).not.toBe(307);
   });
 
-  it("allows admin user to access /admin/users", () => {
-    const res = middleware(createReq("/admin/users", adminUser()));
+  it("allows admin user to access /admin/users", async () => {
+    setSession(adminUser());
+    const res = await middleware(createReq("/admin/users"));
     expect(res.status).not.toBe(307);
   });
 
-  it("does NOT match /administrator as admin route", () => {
-    const res = middleware(createReq("/administrator", null));
-    // /administrator is not in protected or admin routes, so it passes through
+  it("does NOT match /administrator as admin route", async () => {
+    setSession(null);
+    const res = await middleware(createReq("/administrator"));
     expect(res.status).not.toBe(307);
   });
 });

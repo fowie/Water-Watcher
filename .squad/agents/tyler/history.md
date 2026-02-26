@@ -687,3 +687,65 @@
 **2026-02-24 (Round 13 cross-agent — from Utah):** Added admin role system: `role` field on User model, `requireAdmin()` helper in `web/src/lib/admin.ts`, admin user management API (`POST /api/admin/users` for listing, `PATCH /api/admin/users/[id]` for role changes). Created Next.js middleware (`web/src/middleware.ts`) for server-side route protection — protected routes redirect to signin, admin routes redirect non-admins to `/`. Built river analytics API (`GET /api/rivers/[id]/analytics`) with parallel queries for flow trends, quality distribution, best time to visit, review stats, visit count. Key files: `web/src/lib/admin.ts`, `web/src/middleware.ts`, `web/src/app/api/admin/users/route.ts`, `web/src/app/api/rivers/[id]/analytics/route.ts`.
 
 **2026-02-24 (Round 13 cross-agent — from Pappas):** 163 new web tests (722 → 885). Covered admin users, middleware route protection, river analytics, requireAdmin, accessibility (42 tests verifying aria attributes via source file reads). 0 bugs found. Grand total: 1,631 tests.
+
+**2026-02-24:** Round 14 — Onboarding Wizard, Print Stylesheet, Enhanced Error States:
+
+### Onboarding Wizard (`web/src/components/onboarding-wizard.tsx`)
+- Multi-step wizard (4 steps): Welcome → Add Your First River → Set Up Deal Alerts → Done
+- Step 1: Welcome message with feature highlight cards (River Tracking, Gear Deals, Trip Planning), personalized greeting from session
+- Step 2: Inline river search with 300ms debounce using existing `getRivers` API, "Add" button to track rivers via `trackRiver()`, shows added count
+- Step 3: Quick deal filter setup with category dropdown, max price input, comma-separated keywords; saves via `createDealFilter()` with proper `DealFilterInput` shape
+- Step 4: Success with links to Dashboard, Rivers, and Deals pages
+- Tracks completion via localStorage key `water-watcher-onboarding-complete`
+- Shows only when: user is authenticated (via `useSession()`) AND onboarding not completed
+- "Skip" button on every step and X close button that both mark onboarding as complete
+- Animated step transitions with CSS opacity + transform (200ms)
+- Progress indicator: expanding dot for current step, filled dots for completed, empty for future
+- Full-screen modal overlay with backdrop blur
+- Mounted in dashboard page (`web/src/app/page.tsx`) — renders inside `<main>` so it overlays the dashboard content
+
+### Print Stylesheet (`web/src/app/globals.css`)
+- `@media print` block with comprehensive print optimizations
+- Forces light theme colors via `!important` overrides on `:root` and `html.dark`
+- Hides navigation (nav, aside, `[role="navigation"]`), interactive elements (buttons, selects, dialogs, search palette)
+- Expands content to full width by removing sidebar offset padding on `#main-content`
+- River detail: shows all `[role="tabpanel"]` sequentially (hides `[role="tablist"]`), including `[hidden]` and `[data-state="inactive"]` panels
+- Trip detail: clean table layout with `border-collapse` and visible borders
+- `break-inside: avoid` on card-like elements
+- Shows URLs after external links (`a[href^="http"]::after`) — internal links excluded
+- Removes box-shadow/text-shadow globally
+- `@page { margin: 1cm }` for proper page margins
+- Custom `print:hidden` utility class for elements that should never print (e.g., NetworkStatus banner)
+
+### Error Fallback Component (`web/src/components/error-fallback.tsx`)
+- Reusable error component with 4 variants: `not-found`, `server-error`, `network-error`, `auth-error`
+- Each variant has: unique lucide icon (SearchX, ServerCrash, WifiOff, ShieldAlert), colored icon background, default title/description
+- Props: `variant`, `title` (override), `description` (override), `onRetry` (shows Try Again button), `showHomeLink`, `showReportLink`, `reportUrl`
+- Auth-error variant shows "Sign In" button linking to `/auth/signin`
+- Report Issue button opens configurable URL (defaults to GitHub issues) in new tab
+- Card-based centered layout, consistent with existing error pages
+
+### Network Status Banner (`web/src/components/network-status.tsx`)
+- Fixed banner at top of viewport when browser goes offline (`navigator.onLine` + `online`/`offline` events)
+- Orange background with WifiOff icon: "You're offline — some features may be limited"
+- Dismiss button (X icon) hides until next offline event
+- Auto-hides when back online and resets dismissed state
+- `role="alert"` + `aria-live="assertive"` for accessibility
+- `print:hidden` class so it doesn't appear in print output
+- z-index 60 to sit above all other UI
+- Mounted in root layout (`web/src/app/layout.tsx`) above Navigation
+
+### Error Boundary Updates
+- `web/src/app/error.tsx` — Refactored to use `ErrorFallback` component with `variant="server-error"`, `onRetry={reset}`, `showReportLink` enabled
+- `web/src/app/rivers/[id]/error.tsx` — Refactored to use `ErrorFallback` with custom title "Couldn't load river"
+- Both files drastically simplified (removed inline Card/Button/icon markup in favor of reusable component)
+
+### Component Index Updates
+- Exported: `OnboardingWizard`, `ErrorFallback`, `NetworkStatus` from `web/src/components/index.ts`
+
+### Architecture Notes
+- Onboarding uses localStorage for completion tracking (not server-side) — keeps it fast and avoids schema changes
+- ErrorFallback is designed to be composable: any error boundary or page can use it with simple props
+- NetworkStatus auto-resets on reconnection — no stale "offline" state after network returns
+- Print styles use attribute selectors and role-based targeting so they work regardless of component class names
+- Pre-existing build issue: `web/src/app/api/rivers/[id]/route.ts` has a type mismatch with `withETag()` wrapper — not caused by Round 14 changes

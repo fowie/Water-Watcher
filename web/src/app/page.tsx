@@ -15,6 +15,7 @@ import {
   ChevronRight,
   TrendingUp,
 } from "lucide-react";
+import { OnboardingWizard } from "@/components/onboarding-wizard";
 import type { RiverSummary, GearDealRecord } from "@/types";
 
 const DEMO_USER_ID = "demo-user";
@@ -77,6 +78,9 @@ export default function DashboardPage() {
 
   return (
     <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+      {/* Onboarding wizard for first-time users */}
+      <OnboardingWizard />
+
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">

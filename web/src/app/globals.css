@@ -83,3 +83,130 @@ body {
 @utility animate-spin-slow {
   animation: spin-slow 1.5s linear infinite;
 }
+
+/* ─── Print Stylesheet ──────────────────────────────────── */
+@media print {
+  /* Force light theme colors */
+  :root, html.dark {
+    --background: #ffffff !important;
+    --foreground: #0a0a0a !important;
+    --primary: #2563eb !important;
+    --primary-foreground: #ffffff !important;
+    --secondary: #f1f5f9 !important;
+    --secondary-foreground: #0f172a !important;
+    --muted: #f8fafc !important;
+    --muted-foreground: #64748b !important;
+    --border: #e2e8f0 !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #0a0a0a !important;
+  }
+
+  /* Hide navigation elements */
+  nav,
+  aside,
+  [data-nav-sidebar],
+  [role="navigation"],
+  header:has(nav) {
+    display: none !important;
+  }
+
+  /* Hide interactive elements */
+  button:not([data-print-visible]),
+  select,
+  [role="dialog"],
+  [data-radix-popper-content-wrapper],
+  .search-palette,
+  [data-command-palette],
+  [aria-label="Search"] {
+    display: none !important;
+  }
+
+  /* Hide utility UI */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Expand content to full width — remove sidebar offset */
+  #main-content {
+    padding-left: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* River detail: show all tab panels sequentially */
+  [role="tablist"] {
+    display: none !important;
+  }
+
+  [role="tabpanel"] {
+    display: block !important;
+    opacity: 1 !important;
+    position: static !important;
+    visibility: visible !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  [role="tabpanel"][hidden] {
+    display: block !important;
+  }
+
+  [data-state="inactive"] {
+    display: block !important;
+  }
+
+  /* Trip detail: clean table layout */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th, td {
+    border: 1px solid #e2e8f0;
+    padding: 8px 12px;
+    text-align: left;
+  }
+
+  /* Prevent cards from breaking across pages */
+  .rounded-\[var\(--radius\)\],
+  [class*="CardContent"],
+  [class*="card"] {
+    break-inside: avoid;
+  }
+
+  /* Show URLs after links */
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    color: #64748b;
+    word-break: break-all;
+  }
+
+  /* Don't show URL for internal navigation links */
+  a[href^="/"]::after {
+    content: none;
+  }
+
+  /* Remove shadows and decorative styles */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Ensure images print well */
+  img {
+    max-width: 100% !important;
+    break-inside: avoid;
+  }
+
+  /* Page margins */
+  @page {
+    margin: 1cm;
+  }
+}

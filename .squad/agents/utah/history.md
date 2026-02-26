@@ -554,3 +554,42 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 **2026-02-24 (Round 13 cross-agent — from Tyler):** Built admin user management page at `/admin/users` — table with search/pagination, native `<select>` for role changes, self-demotion prevention (dropdown disabled for current user). Created `KeyboardShortcuts` overlay (triggered by `?`). Comprehensive accessibility audit: `aria-current="page"` on active nav links, `aria-live="polite"` on toast viewport, `aria-expanded` on expandable elements, focus trap in search palette, WCAG AA color contrast verification. Added `getAdminUsers()` and `updateAdminUserRole()` to `api.ts`. Key file: `web/src/app/admin/users/page.tsx`.
 
 **2026-02-24 (Round 13 cross-agent — from Pappas):** 163 new web tests (722 → 885). Covered admin users API (search, pagination, role changes, self-demotion prevention), middleware (public/protected/admin route behavior), river analytics (flow trends, quality distribution, best time, reviews, visits), requireAdmin helper (401/403 cases), accessibility (aria attributes verified via source file reads). 0 bugs found. Grand total: 1,631 tests.
+
+**2026-02-24:** Round 14 — Content Security Policy, ETag caching, input sanitization:
+
+### Content Security Policy (`web/next.config.ts`)
+- Comprehensive CSP header added alongside existing security headers
+- Directives: `default-src 'self'`, `script-src 'self'`, `style-src 'self' 'unsafe-inline' unpkg.com` (Tailwind + Leaflet CDN), `img-src 'self' data:` (base64 photo uploads), `font-src 'self'`, `connect-src 'self' api.open-meteo.com accounts.google.com github.com` (weather + OAuth), `frame-src accounts.google.com github.com` (OAuth popups), `frame-ancestors 'none'` (belt-and-suspenders with X-Frame-Options), `worker-src 'self' blob:` (service worker), `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`
+- `report-uri /api/csp-report` — violations logged to server console
+- CSP directives defined as array joined with `;` for readability
+
+### CSP Report Endpoint (`web/src/app/api/csp-report/route.ts`)
+- POST handler that receives browser CSP violation reports
+- Extracts `csp-report` object and logs: document-uri, violated-directive, blocked-uri, source-file, line/column numbers
+- Always returns 204 — gracefully accepts malformed reports
+- No auth required (browsers send these automatically)
+
+### ETag Support (`web/src/lib/etag.ts`)
+- `withETag(handler)` HOF that wraps GET route handlers
+- Computes weak ETag (`W/"<md5>"`) from response body using Node crypto
+- Checks `If-None-Match` header — returns 304 Not Modified with no body if matches
+- Sets `Cache-Control: public, max-age=60, stale-while-revalidate=300` on all 200 responses
+- Applied to: `GET /api/rivers`, `GET /api/rivers/[id]`, `GET /api/deals`, `GET /api/search`
+- NOT applied to authenticated/user-specific endpoints (trips, user/rivers, alerts)
+
+### Input Sanitization (`web/src/lib/sanitize.ts`)
+- `sanitizeHtml(input)` — strips `<script>`, `<iframe>`, `<object>`, `<embed>`, `<applet>` tags and content, removes event handlers (`on*=`), `javascript:` URLs, data: in href/src, then strips all remaining HTML tags. Re-escapes angle brackets after entity decode. No external library.
+- `sanitizeFilename(input)` — removes null bytes, path separators, directory traversal, unsafe chars. Keeps alphanumeric/dash/underscore/dot/space. Limits to 255 chars. Falls back to "download".
+- `truncate(input, maxLength)` — truncates with "..." ellipsis if over limit
+- Applied to: review title (200 chars) and body (5000 chars), trip name (200) and notes (5000), photo caption (500)
+- Applied in: `POST /api/rivers/[id]/reviews`, `POST /api/trips`, `PATCH /api/trips/[id]`, `POST /api/rivers/[id]/photos`
+
+### Key File Paths
+- `web/next.config.ts` — CSP header definition
+- `web/src/app/api/csp-report/route.ts` — CSP violation logging
+- `web/src/lib/etag.ts` — ETag HOF
+- `web/src/lib/sanitize.ts` — sanitizeHtml, sanitizeFilename, truncate
+
+### Test Results
+- Web: 982 passed (no regressions), build clean
+- Pipeline: unchanged

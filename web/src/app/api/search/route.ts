@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { apiError, handleApiError } from "@/lib/api-errors";
 import { auth } from "@/lib/auth";
+import { withETag } from "@/lib/etag";
 
 const searchParamsSchema = z.object({
   q: z.string().min(1, "Search term is required"),
@@ -18,7 +19,7 @@ interface SearchResultItem {
   url: string;
 }
 
-export async function GET(request: Request) {
+export const GET = withETag(async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const parsed = searchParamsSchema.safeParse({
@@ -178,4 +179,4 @@ export async function GET(request: Request) {
   } catch (error) {
     return handleApiError(error);
   }
-}
+});

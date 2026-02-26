@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withETag } from "@/lib/etag";
 
-export async function GET(request: Request) {
+export const GET = withETag(async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
@@ -45,4 +46,4 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-}
+});

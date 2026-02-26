@@ -4,6 +4,7 @@ import { photoSchema } from "@/lib/validations";
 import { apiError, handleApiError } from "@/lib/api-errors";
 import { withAuth, withRateLimit } from "@/lib/api-middleware";
 import { reviewConfig } from "@/lib/rate-limit";
+import { sanitizeHtml, truncate } from "@/lib/sanitize";
 
 export async function GET(
   request: Request,
@@ -82,7 +83,7 @@ export const POST = withRateLimit(
           riverId,
           userId,
           url: parsed.data.url,
-          caption: parsed.data.caption ?? null,
+          caption: parsed.data.caption ? truncate(sanitizeHtml(parsed.data.caption), 500) : null,
           takenAt: parsed.data.takenAt ? new Date(parsed.data.takenAt) : null,
         },
         include: {

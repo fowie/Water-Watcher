@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { tripSchema } from "@/lib/validations";
 import { handleApiError } from "@/lib/api-errors";
 import { withAuth } from "@/lib/api-middleware";
+import { sanitizeHtml, truncate } from "@/lib/sanitize";
 
 export const GET = withAuth(async (request: Request) => {
   try {
@@ -57,6 +58,8 @@ export const POST = withAuth(async (request: Request) => {
     const trip = await prisma.trip.create({
       data: {
         ...rest,
+        name: truncate(sanitizeHtml(rest.name), 200),
+        ...(rest.notes ? { notes: truncate(sanitizeHtml(rest.notes), 5000) } : {}),
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         userId,

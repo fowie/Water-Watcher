@@ -1,5 +1,21 @@
 import type { NextConfig } from "next";
 
+const cspDirectives = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline' https://unpkg.com",
+  "img-src 'self' data:",
+  "font-src 'self'",
+  "connect-src 'self' https://api.open-meteo.com https://accounts.google.com https://github.com",
+  "frame-src https://accounts.google.com https://github.com",
+  "frame-ancestors 'none'",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "report-uri /api/csp-report",
+].join("; ");
+
 const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {},
@@ -19,6 +35,10 @@ const nextConfig: NextConfig = {
           {
             key: "Strict-Transport-Security",
             value: "max-age=31536000; includeSubDomains",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: cspDirectives,
           },
         ],
       },

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { tripUpdateSchema } from "@/lib/validations";
 import { apiError, handleApiError } from "@/lib/api-errors";
 import { withAuth } from "@/lib/api-middleware";
+import { sanitizeHtml, truncate } from "@/lib/sanitize";
 
 export const GET = withAuth(async (
   request: Request,
@@ -75,6 +76,8 @@ export const PATCH = withAuth(async (
 
     const { startDate, endDate, ...rest } = parsed.data;
     const data: Record<string, unknown> = { ...rest };
+    if (rest.name) data.name = truncate(sanitizeHtml(rest.name), 200);
+    if (rest.notes !== undefined) data.notes = rest.notes ? truncate(sanitizeHtml(rest.notes), 5000) : rest.notes;
     if (startDate) data.startDate = new Date(startDate);
     if (endDate) data.endDate = new Date(endDate);
 
