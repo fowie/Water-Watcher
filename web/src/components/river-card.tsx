@@ -25,9 +25,9 @@ interface RiverCardProps {
   onSelect?: (riverId: string) => void;
   /** Optional recent flow rate data for sparkline (last 7 values) */
   sparklineData?: (number | null)[];
-}, sparklineData
+}
 
-export function RiverCard({ river, onDelete, isFavorited, onToggleFavorite, selectable, selected, onSelect }: RiverCardProps) {
+export function RiverCard({ river, onDelete, isFavorited, onToggleFavorite, selectable, selected, onSelect, sparklineData }: RiverCardProps) {
   const cond = river.latestCondition;
   const timeAgo = cond?.scrapedAt
     ? getRelativeTime(new Date(cond.scrapedAt))

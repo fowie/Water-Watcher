@@ -284,7 +284,9 @@ function StatsContent() {
                   );
                 })}
               </div>
-            )
+            )}
+          </CardContent>
+        </Card>
 
       {/* Global Safety Dashboard */}
       <Card>
@@ -344,9 +346,7 @@ function StatsContent() {
             </div>
           )}
         </CardContent>
-      </Card>}
-          </CardContent>
-        </Card>
+      </Card>
       </div>
 
       {/* Your Stats */}
