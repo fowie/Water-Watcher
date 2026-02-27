@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const cspDirectives = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https://unpkg.com",
   "img-src 'self' data:",
   "font-src 'self'",
