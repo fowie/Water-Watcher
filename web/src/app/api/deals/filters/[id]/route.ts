@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { dealFilterUpdateSchema } from "@/lib/validations";
 import { apiError, handleApiError } from "@/lib/api-errors";
-import { withAuth } from "@/lib/api-middleware";
+import { withAuth, withApiRateLimit } from "@/lib/api-middleware";
 
 export const GET = withAuth(async (
   request: Request,
@@ -34,7 +34,7 @@ export const GET = withAuth(async (
   }
 });
 
-export const PATCH = withAuth(async (
+export const PATCH = withApiRateLimit(withAuth(async (
   request: Request,
   context?: unknown
 ) => {
@@ -72,9 +72,9 @@ export const PATCH = withAuth(async (
   } catch (error) {
     return handleApiError(error);
   }
-});
+}));
 
-export const DELETE = withAuth(async (
+export const DELETE = withApiRateLimit(withAuth(async (
   request: Request,
   context?: unknown
 ) => {
@@ -98,4 +98,4 @@ export const DELETE = withAuth(async (
   } catch (error) {
     return handleApiError(error);
   }
-});
+}));

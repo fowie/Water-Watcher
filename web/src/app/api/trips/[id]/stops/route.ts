@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { tripStopSchema } from "@/lib/validations";
 import { apiError, handleApiError } from "@/lib/api-errors";
-import { withAuth } from "@/lib/api-middleware";
+import { withAuth, withApiRateLimit } from "@/lib/api-middleware";
 
-export const POST = withAuth(async (
+export const POST = withApiRateLimit(withAuth(async (
   request: Request,
   context?: unknown
 ) => {
@@ -52,4 +52,4 @@ export const POST = withAuth(async (
   } catch (error) {
     return handleApiError(error);
   }
-});
+}));

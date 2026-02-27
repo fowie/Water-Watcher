@@ -63,6 +63,20 @@ export const reviewConfig: RateLimitConfig = {
   refillInterval: 1,
 };
 
+/** Authenticated write endpoints: 60 requests per minute */
+export const authenticatedWriteConfig: RateLimitConfig = {
+  maxTokens: 60,
+  refillRate: 1, // 1 token per second = 60 per minute
+  refillInterval: 1,
+};
+
+/** Anonymous write endpoints: 20 requests per minute */
+export const anonymousWriteConfig: RateLimitConfig = {
+  maxTokens: 20,
+  refillRate: 20 / 60, // ~0.33 tokens per second
+  refillInterval: 1,
+};
+
 function getClientIP(request: Request): string {
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
@@ -83,10 +97,11 @@ export interface RateLimitResult {
 
 export function rateLimit(
   request: Request,
-  config: RateLimitConfig = defaultConfig
+  config: RateLimitConfig = defaultConfig,
+  keyOverride?: string
 ): RateLimitResult {
   const ip = getClientIP(request);
-  const key = `${ip}:${config.maxTokens}`;
+  const key = keyOverride ?? `${ip}:${config.maxTokens}`;
   const now = Date.now();
 
   startCleanup();

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { riverSchema } from "@/lib/validations";
 import { handleApiError } from "@/lib/api-errors";
-import { withAuth } from "@/lib/api-middleware";
+import { withAuth, withApiRateLimit } from "@/lib/api-middleware";
 import { withETag } from "@/lib/etag";
 
 export const GET = withETag(async function GET(request: Request) {
@@ -52,7 +52,7 @@ export const GET = withETag(async function GET(request: Request) {
   }
 });
 
-export const POST = withAuth(async (request: Request) => {
+export const POST = withApiRateLimit(withAuth(async (request: Request) => {
   try {
     const body = await request.json();
     const parsed = riverSchema.safeParse(body);
@@ -72,4 +72,4 @@ export const POST = withAuth(async (request: Request) => {
   } catch (error) {
     return handleApiError(error);
   }
-});
+}));

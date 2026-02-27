@@ -45,3 +45,6 @@ export { KeyboardShortcuts } from "./keyboard-shortcuts";
 export { OnboardingWizard } from "./onboarding-wizard";
 export { ErrorFallback } from "./error-fallback";
 export { NetworkStatus } from "./network-status";
+export { FlowChart } from "./flow-chart";
+export { ConditionSparkline } from "./condition-sparkline";
+export { InstallPrompt } from "./install-prompt";

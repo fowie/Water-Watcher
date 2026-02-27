@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { dealFilterSchema } from "@/lib/validations";
 import { handleApiError } from "@/lib/api-errors";
-import { withAuth } from "@/lib/api-middleware";
+import { withAuth, withApiRateLimit } from "@/lib/api-middleware";
 
 export const GET = withAuth(async (request: Request) => {
   try {
@@ -22,7 +22,7 @@ export const GET = withAuth(async (request: Request) => {
   }
 });
 
-export const POST = withAuth(async (request: Request) => {
+export const POST = withApiRateLimit(withAuth(async (request: Request) => {
   try {
     const userId = request.headers.get("x-user-id")!;
     const body = await request.json();
@@ -46,4 +46,4 @@ export const POST = withAuth(async (request: Request) => {
   } catch (error) {
     return handleApiError(error);
   }
-});
+}));

@@ -13,6 +13,7 @@ import { EditRiverDialog } from "@/components/edit-river-dialog";
 import { MapLink } from "@/components/map-link";
 import { Button } from "@/components/ui/button";
 import { FlowTrend } from "@/components/flow-trend";
+import { FlowChart } from "@/components/flow-chart";
 import { WeatherWidget } from "@/components/weather-widget";
 import { RiverReviews } from "@/components/river-reviews";
 import { ReviewForm } from "@/components/review-form";
@@ -35,6 +36,7 @@ import {
   CloudSun,
   MessageSquare,
   Camera,
+  TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { PhotoGallery } from "@/components/photo-gallery";
@@ -199,10 +201,14 @@ export default function RiverDetailPage() {
 
       {/* Tabbed content */}
       <Tabs defaultValue="conditions" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-4 sm:grid-cols-8">
           <TabsTrigger value="conditions">
             <Droplets className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
             Conditions
+          </TabsTrigger>
+          <TabsTrigger value="flow-history">
+            <TrendingUp className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
+            Flow
           </TabsTrigger>
           <TabsTrigger value="weather">
             <CloudSun className="h-4 w-4 mr-1.5 hidden sm:inline-block" />
@@ -232,6 +238,12 @@ export default function RiverDetailPage() {
 
         <TabsContent value="conditions">
           <ConditionsTab conditions={river.conditions ?? []} />
+        </TabsContent>
+        <TabsContent value="flow-history">
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Flow History</h2>
+            <FlowChart riverId={id} />
+          </div>
         </TabsContent>
         <TabsContent value="weather">
           <WeatherWidget latitude={river.latitude} longitude={river.longitude} />

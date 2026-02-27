@@ -36,9 +36,6 @@ export interface DealMatchEvent {
   dealPrice: number | null;
   dealUrl: string;
   category: string | null;
-  filterId: string;
-  filterName: string;
-  userId: string;
   matchedAt: string;
 }
 

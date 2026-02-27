@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { rateLimit, defaultConfig } from "@/lib/rate-limit";
+import {
+  rateLimit,
+  defaultConfig,
+  authenticatedWriteConfig,
+  anonymousWriteConfig,
+} from "@/lib/rate-limit";
 import type { RateLimitConfig } from "@/lib/rate-limit";
 
 type RouteHandler = (
@@ -77,6 +82,56 @@ export function withRateLimit(
     const response = await handler(request, context);
 
     // Add rate limit headers to successful responses
+    const newResponse = new NextResponse(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: new Headers(response.headers),
+    });
+    newResponse.headers.set("X-RateLimit-Remaining", String(result.remaining));
+    newResponse.headers.set("X-RateLimit-Reset", String(result.reset));
+
+    return newResponse;
+  };
+}
+
+/**
+ * Higher-order function that applies adaptive rate limiting to write endpoints.
+ * Uses different limits based on authentication status:
+ * - Authenticated users (x-user-id present): 60 requests/min (keyed by user ID)
+ * - Anonymous users: 20 requests/min (keyed by IP)
+ *
+ * Designed for POST/PUT/PATCH/DELETE. Compose after withAuth:
+ *   export const POST = withApiRateLimit(withAuth(handler));
+ */
+export function withApiRateLimit(handler: RouteHandler): RouteHandler {
+  return async (request: Request, context?: unknown) => {
+    const userId = request.headers.get("x-user-id");
+
+    const config = userId ? authenticatedWriteConfig : anonymousWriteConfig;
+    const key = userId ? `user:${userId}:write` : undefined; // undefined falls back to IP-based key
+
+    const result = rateLimit(request, config, key);
+
+    if (!result.success) {
+      const retryAfter = Math.max(
+        1,
+        result.reset - Math.ceil(Date.now() / 1000)
+      );
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(retryAfter),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": String(result.reset),
+          },
+        }
+      );
+    }
+
+    const response = await handler(request, context);
+
     const newResponse = new NextResponse(response.body, {
       status: response.status,
       statusText: response.statusText,

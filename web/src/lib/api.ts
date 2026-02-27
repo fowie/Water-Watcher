@@ -92,6 +92,60 @@ export async function updateRiver(id: string, data: RiverUpdateInput) {
   });
 }
 
+// ─── River Flow History ─────────────────────────────────
+
+export interface FlowHistoryPoint {
+  timestamp: string;
+  flowRate: number | null;
+  gaugeHeight: number | null;
+  waterTemp: number | null;
+  source: string;
+}
+
+export interface FlowHistoryResponse {
+  points: FlowHistoryPoint[];
+  river: { id: string; name: string };
+  range: string;
+}
+
+export async function getFlowHistory(
+  riverId: string,
+  range: "24h" | "7d" | "30d" | "90d" = "7d"
+): Promise<FlowHistoryResponse> {
+  return fetcher<FlowHistoryResponse>(
+    `/api/rivers/${riverId}/flow-history?range=${range}`
+  );
+}
+
+// ─── Batch River Conditions ─────────────────────────────
+
+export interface BatchCondition {
+  id: string;
+  riverId: string;
+  riverName: string;
+  state: string;
+  difficulty: string | null;
+  flowRate: number | null;
+  gaugeHeight: number | null;
+  waterTemp: number | null;
+  quality: string | null;
+  runnability: string | null;
+  source: string;
+  scrapedAt: string;
+}
+
+export interface BatchConditionsResponse {
+  conditions: Record<string, BatchCondition | null>;
+}
+
+export async function getBatchConditions(
+  ids: string[]
+): Promise<BatchConditionsResponse> {
+  return fetcher<BatchConditionsResponse>(
+    `/api/rivers/conditions?ids=${ids.join(",")}`
+  );
+}
+
 // ─── Deals ──────────────────────────────────────────────
 
 export interface DealsResponse {

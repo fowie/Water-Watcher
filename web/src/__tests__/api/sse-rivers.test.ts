@@ -34,6 +34,12 @@ vi.mock("@/lib/db", () => ({
 
 import { GET } from "@/app/api/sse/rivers/route";
 
+function makeSSERequest(headers?: Record<string, string>): Request {
+  return new Request("http://localhost/api/sse/rivers", {
+    headers: headers ?? {},
+  });
+}
+
 /**
  * Helper: reads chunks from the SSE response stream until no more data arrives
  * within a short timeout. SSE streams never close on their own (long-lived),
@@ -95,25 +101,25 @@ describe("GET /api/sse/rivers", () => {
   // ─── Response Headers ────────────────────────────────
 
   it("returns Content-Type text/event-stream", async () => {
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     expect(res.headers.get("Content-Type")).toBe("text/event-stream");
     await res.body?.cancel();
   });
 
   it("returns Cache-Control no-cache, no-transform", async () => {
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     expect(res.headers.get("Cache-Control")).toBe("no-cache, no-transform");
     await res.body?.cancel();
   });
 
   it("returns Connection keep-alive", async () => {
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     expect(res.headers.get("Connection")).toBe("keep-alive");
     await res.body?.cancel();
   });
 
   it("returns X-Accel-Buffering no header", async () => {
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     expect(res.headers.get("X-Accel-Buffering")).toBe("no");
     await res.body?.cancel();
   });
@@ -121,7 +127,7 @@ describe("GET /api/sse/rivers", () => {
   // ─── Retry Directive ─────────────────────────────────
 
   it("sends retry:5000 directive as first message", async () => {
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     // First block should be retry
     expect(text).toContain("retry: 5000");
@@ -136,7 +142,7 @@ describe("GET /api/sse/rivers", () => {
   // ─── Empty Database ──────────────────────────────────
 
   it("returns stream with only retry when database is empty", async () => {
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     const events = parseSSEEvents(text);
 
@@ -164,7 +170,7 @@ describe("GET /api/sse/rivers", () => {
     ];
     mockPrisma.riverCondition.findMany.mockResolvedValue(mockConditions);
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     const events = parseSSEEvents(text);
 
@@ -215,7 +221,7 @@ describe("GET /api/sse/rivers", () => {
     ];
     mockPrisma.riverCondition.findMany.mockResolvedValue(mockConditions);
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     const events = parseSSEEvents(text);
 
@@ -241,7 +247,7 @@ describe("GET /api/sse/rivers", () => {
     ];
     mockPrisma.hazard.findMany.mockResolvedValue(mockHazards);
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     const events = parseSSEEvents(text);
 
@@ -272,17 +278,12 @@ describe("GET /api/sse/rivers", () => {
           url: "https://example.com/deal1",
           category: "rafts",
         },
-        filter: {
-          id: "filter-1",
-          name: "Raft Deals",
-          userId: "user-1",
-        },
         createdAt: new Date("2026-02-24T09:00:00Z"),
       },
     ];
     mockPrisma.dealFilterMatch.findMany.mockResolvedValue(mockMatches);
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     const events = parseSSEEvents(text);
 
@@ -296,8 +297,8 @@ describe("GET /api/sse/rivers", () => {
     expect(data.dealPrice).toBe(3500);
     expect(data.dealUrl).toBe("https://example.com/deal1");
     expect(data.category).toBe("rafts");
-    expect(data.filterId).toBe("filter-1");
-    expect(data.filterName).toBe("Raft Deals");
+    expect(data.filterId).toBeUndefined(); // filter info intentionally excluded (security)
+    expect(data.filterName).toBeUndefined();
     expect(data.userId).toBeUndefined(); // userId intentionally excluded (security)
     expect(data.matchedAt).toBe("2026-02-24T09:00:00.000Z");
   });
@@ -327,12 +328,11 @@ describe("GET /api/sse/rivers", () => {
       {
         id: "m1",
         deal: { id: "d1", title: "Deal 1", price: null, url: "http://x.com", category: null },
-        filter: { id: "f1", name: "F1", userId: "u1" },
         createdAt: now,
       },
     ]);
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     const events = parseSSEEvents(text);
 
@@ -344,7 +344,7 @@ describe("GET /api/sse/rivers", () => {
   // ─── Prisma Query Structure ──────────────────────────
 
   it("queries conditions from the last hour with descending order", async () => {
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     await readSSEStream(res);
 
     expect(mockPrisma.riverCondition.findMany).toHaveBeenCalledWith(
@@ -363,7 +363,7 @@ describe("GET /api/sse/rivers", () => {
   });
 
   it("queries only active hazards from the last hour", async () => {
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     await readSSEStream(res);
 
     expect(mockPrisma.hazard.findMany).toHaveBeenCalledWith(
@@ -379,7 +379,7 @@ describe("GET /api/sse/rivers", () => {
   });
 
   it("queries deal filter matches from the last hour", async () => {
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     await readSSEStream(res);
 
     expect(mockPrisma.dealFilterMatch.findMany).toHaveBeenCalledWith(
@@ -397,7 +397,7 @@ describe("GET /api/sse/rivers", () => {
     mockPrisma.riverCondition.findMany.mockRejectedValue(new Error("DB connection failed"));
     // The stream should still be returned as a valid response
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     expect(res.headers.get("Content-Type")).toBe("text/event-stream");
     // Stream is still created despite the error
     expect(res.body).toBeTruthy();
@@ -417,11 +417,11 @@ describe("GET /api/sse/rivers", () => {
       },
     ]);
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
 
-    // Verify SSE format: event line followed by data line
-    expect(text).toMatch(/event: condition-update\ndata: \{.*\}\n\n/);
+    // Verify SSE format: optional id line, event line followed by data line
+    expect(text).toMatch(/(?:id: .+\n)?event: condition-update\ndata: \{.*\}\n\n/);
   });
 
   // ─── Null fields ──────────────────────────────────────
@@ -437,7 +437,7 @@ describe("GET /api/sse/rivers", () => {
       },
     ]);
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     const events = parseSSEEvents(text);
     const condEvents = events.filter((e) => e.event === "condition-update");
@@ -462,7 +462,7 @@ describe("GET /api/sse/rivers", () => {
       },
     ]);
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     const events = parseSSEEvents(text);
     const hazEvents = events.filter((e) => e.event === "hazard-alert");
@@ -476,12 +476,11 @@ describe("GET /api/sse/rivers", () => {
       {
         id: "m1",
         deal: { id: "d1", title: "Free item", price: null, url: "http://x.com", category: null },
-        filter: { id: "f1", name: "Free Stuff", userId: "u1" },
         createdAt: new Date(),
       },
     ]);
 
-    const res = await GET();
+    const res = await GET(makeSSERequest());
     const text = await readSSEStream(res);
     const events = parseSSEEvents(text);
     const dealEvents = events.filter((e) => e.event === "deal-match");

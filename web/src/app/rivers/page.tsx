@@ -282,6 +282,7 @@ export default function RiversPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
+            aria-label="Search rivers"
           />
         </div>
         <div className="flex items-center gap-2">

@@ -6,21 +6,35 @@ import { prisma } from "@/lib/db";
  * Sends initial snapshot of recently updated rivers (last 1 hour),
  * then polls DB every 30 seconds for new conditions.
  *
+ * Supports `Last-Event-Id` header for delta updates on reconnection —
+ * only sends conditions newer than the client's last-seen timestamp.
+ *
  * Event types: condition-update, hazard-alert, deal-match
  */
-export async function GET() {
+export async function GET(request: Request) {
   const encoder = new TextEncoder();
+
+  // Support Last-Event-Id for reconnection delta updates
+  const lastEventId = request.headers.get("Last-Event-Id");
+  let clientLastSeen: Date | null = null;
+  if (lastEventId) {
+    const parsed = new Date(lastEventId);
+    if (!isNaN(parsed.getTime())) {
+      clientLastSeen = parsed;
+    }
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
       let closed = false;
 
-      function send(event: string, data: unknown) {
+      function send(event: string, data: unknown, id?: string) {
         if (closed) return;
         try {
-          controller.enqueue(
-            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-          );
+          let msg = "";
+          if (id) msg += `id: ${id}\n`;
+          msg += `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+          controller.enqueue(encoder.encode(msg));
         } catch {
           closed = true;
         }
@@ -33,13 +47,13 @@ export async function GET() {
         closed = true;
       }
 
-      // --- Initial snapshot: conditions updated in the last hour ---
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      // --- Initial snapshot: use client's last-seen time or default to 1 hour ago ---
+      const snapshotSince = clientLastSeen ?? new Date(Date.now() - 60 * 60 * 1000);
       let lastPollTime = new Date();
 
       try {
         const recentConditions = await prisma.riverCondition.findMany({
-          where: { scrapedAt: { gte: oneHourAgo } },
+          where: { scrapedAt: { gte: snapshotSince } },
           include: {
             river: { select: { id: true, name: true, state: true, difficulty: true } },
           },
@@ -48,6 +62,7 @@ export async function GET() {
         });
 
         for (const condition of recentConditions) {
+          const ts = condition.scrapedAt.toISOString();
           send("condition-update", {
             id: condition.id,
             riverId: condition.riverId,
@@ -59,13 +74,13 @@ export async function GET() {
             quality: condition.quality,
             runnability: condition.runnability,
             source: condition.source,
-            scrapedAt: condition.scrapedAt.toISOString(),
-          });
+            scrapedAt: ts,
+          }, ts);
         }
 
         // Send recent hazards
         const recentHazards = await prisma.hazard.findMany({
-          where: { reportedAt: { gte: oneHourAgo }, isActive: true },
+          where: { reportedAt: { gte: snapshotSince }, isActive: true },
           include: {
             river: { select: { id: true, name: true } },
           },
@@ -74,6 +89,7 @@ export async function GET() {
         });
 
         for (const hazard of recentHazards) {
+          const ts = hazard.reportedAt.toISOString();
           send("hazard-alert", {
             id: hazard.id,
             riverId: hazard.riverId,
@@ -82,22 +98,22 @@ export async function GET() {
             severity: hazard.severity,
             title: hazard.title,
             description: hazard.description,
-            reportedAt: hazard.reportedAt.toISOString(),
-          });
+            reportedAt: ts,
+          }, ts);
         }
 
-        // Send recent deal matches
+        // Send recent deal matches (no user-specific data)
         const recentMatches = await prisma.dealFilterMatch.findMany({
-          where: { createdAt: { gte: oneHourAgo } },
+          where: { createdAt: { gte: snapshotSince } },
           include: {
             deal: { select: { id: true, title: true, price: true, url: true, category: true } },
-            filter: { select: { id: true, name: true, userId: true } },
           },
           orderBy: { createdAt: "desc" },
           take: 20,
         });
 
         for (const match of recentMatches) {
+          const ts = match.createdAt.toISOString();
           send("deal-match", {
             matchId: match.id,
             dealId: match.deal.id,
@@ -105,10 +121,8 @@ export async function GET() {
             dealPrice: match.deal.price,
             dealUrl: match.deal.url,
             category: match.deal.category,
-            filterId: match.filter.id,
-            filterName: match.filter.name,
-            matchedAt: match.createdAt.toISOString(),
-          });
+            matchedAt: ts,
+          }, ts);
         }
       } catch (error) {
         console.error("SSE initial snapshot error:", error);
@@ -133,6 +147,7 @@ export async function GET() {
           });
 
           for (const condition of newConditions) {
+            const ts = condition.scrapedAt.toISOString();
             send("condition-update", {
               id: condition.id,
               riverId: condition.riverId,
@@ -144,8 +159,8 @@ export async function GET() {
               quality: condition.quality,
               runnability: condition.runnability,
               source: condition.source,
-              scrapedAt: condition.scrapedAt.toISOString(),
-            });
+              scrapedAt: ts,
+            }, ts);
           }
 
           // New hazards since last poll
@@ -159,6 +174,7 @@ export async function GET() {
           });
 
           for (const hazard of newHazards) {
+            const ts = hazard.reportedAt.toISOString();
             send("hazard-alert", {
               id: hazard.id,
               riverId: hazard.riverId,
@@ -167,22 +183,22 @@ export async function GET() {
               severity: hazard.severity,
               title: hazard.title,
               description: hazard.description,
-              reportedAt: hazard.reportedAt.toISOString(),
-            });
+              reportedAt: ts,
+            }, ts);
           }
 
-          // New deal matches since last poll
+          // New deal matches since last poll (no user-specific data)
           const newMatches = await prisma.dealFilterMatch.findMany({
             where: { createdAt: { gt: lastPollTime } },
             include: {
               deal: { select: { id: true, title: true, price: true, url: true, category: true } },
-              filter: { select: { id: true, name: true, userId: true } },
             },
             orderBy: { createdAt: "desc" },
             take: 20,
           });
 
           for (const match of newMatches) {
+            const ts = match.createdAt.toISOString();
             send("deal-match", {
               matchId: match.id,
               dealId: match.deal.id,
@@ -190,10 +206,8 @@ export async function GET() {
               dealPrice: match.deal.price,
               dealUrl: match.deal.url,
               category: match.deal.category,
-              filterId: match.filter.id,
-              filterName: match.filter.name,
-              matchedAt: match.createdAt.toISOString(),
-            });
+              matchedAt: ts,
+            }, ts);
           }
 
           lastPollTime = new Date();

@@ -749,3 +749,66 @@
 - NetworkStatus auto-resets on reconnection — no stale "offline" state after network returns
 - Print styles use attribute selectors and role-based targeting so they work regardless of component class names
 - Pre-existing build issue: `web/src/app/api/rivers/[id]/route.ts` has a type mismatch with `withETag()` wrapper — not caused by Round 14 changes
+
+**2026-02-26:** Round 15 — River Flow Charts, PWA Install Prompt, Accessibility Pass, Condition Sparklines:
+
+### River Flow Chart (`web/src/components/flow-chart.tsx`)
+- SVG-based responsive line chart visualizing flow rate (CFS) over time — no external charting library
+- Time range tabs: 24h, 7d, 30d, 90d — tab-style toggle buttons with `role="tablist"` + `role="tab"` + `aria-selected`
+- Hover tooltip showing exact CFS value + formatted timestamp + color-coded zone label, positioned near cursor with boundary clamping
+- Color-coded background zones: green (optimal), yellow (high), red (dangerous) — configurable `thresholds` prop (`{optimal, high}`)
+- Dashed threshold lines at optimal and high boundaries
+- Gradient area fill below the line for visual depth
+- SVG crosshair lines on hover for precise value reading
+- Y-axis: auto-scaled with 5 tick marks, CFS label rotated, values formatted with k suffix for thousands
+- X-axis: time labels formatted per range (time for 24h, weekday for 7d, month/day for 30d/90d)
+- `ResizeObserver` for responsive width — fills container, height proportional (50% of width, clamped 200-350px)
+- Loading skeleton: animated pulse bar chart placeholder with `role="status"` and `aria-label`
+- Error/empty states with centered messages in bordered containers
+- Fetches from `GET /api/rivers/[id]/flow-history?range=...` (endpoint will be built by Utah)
+- Added `getFlowHistory()` to `web/src/lib/api.ts` with `FlowDataPoint` and `FlowHistoryResponse` types
+- Wired into river detail page as new "Flow" tab (TrendingUp icon) — tab grid expanded from 7 to 8 columns
+- Legend in tab header showing optimal/high/dangerous color dots
+- All chart elements: `role="img"` with descriptive `aria-label` on SVG
+
+### Condition Sparkline (`web/src/components/condition-sparkline.tsx`)
+- Tiny inline SVG sparkline (default 80x24px, configurable `width` and `height` props)
+- Accepts `data: (number | null)[]` — filters out nulls, needs ≥2 values to render
+- Trend detection: compares first-half vs second-half average — rising (blue), falling (orange), stable (green) with >10% threshold
+- SVG line + gradient area fill + end dot indicator
+- No-data state: dashed horizontal midline
+- `role="img"` with `aria-label` including trend label (e.g., "Flow trend: rising")
+- Added to `RiverCard` as optional `sparklineData` prop — renders in the stats row with `ml-auto` alignment
+- Unique gradient IDs to avoid SVG ID conflicts when multiple sparklines on page
+
+### PWA Install Prompt (`web/src/components/install-prompt.tsx`)
+- Dismissable banner using `beforeinstallprompt` event to detect installability
+- Fixed position: bottom-right on desktop (w-96), full-width above bottom tab bar on mobile
+- "Install" and "Not now" buttons + close X button
+- Checks `display-mode: standalone` and `navigator.standalone` to detect already-installed state
+- Dismissed state stored in `sessionStorage` — resets each session for re-engagement
+- Auto-hides after `appinstalled` event fires
+- `role="alert"` + `aria-live="polite"` for screen reader announcement
+- Download icon in blue circular badge for visual interest
+- Added to root layout (`web/src/app/layout.tsx`) alongside Toaster component
+
+### PWA Manifest Update (`web/public/manifest.json`)
+- Updated description to match full app description
+- Added `id`, `lang`, `screenshots`, `prefer_related_applications` fields for better PWA compliance
+- Manifest link and theme-color meta tag already existed in root layout head from previous rounds
+
+### Accessibility Pass
+- **`role="status"`** added to `NetworkStatus` component (changed from `role="alert"` since it's a status indicator, retaining `aria-live="assertive"`)
+- **Skip-to-content link**: Enhanced with `focus:outline-2 focus:outline-offset-2 focus:outline-[var(--ring)] focus:shadow-lg` for more visible focus state
+- **Form inputs**: Added `aria-label="Search rivers"` to river search input on rivers page (placeholder alone isn't sufficient for screen readers)
+- **`aria-current="page"`**: Already implemented in all nav links (desktop sidebar, mobile sheet, bottom tab bar) from Round 13
+- **`aria-live="polite"`**: Already on `ToastViewport` and notification bell dropdown from previous rounds
+- **`aria-label` on icon-only buttons**: Already comprehensive from Round 3/13 — theme toggle, notification bell, search, delete, menu, etc.
+- **`aria-hidden="true"` on decorative icons**: Already applied across all components from Round 3/13
+- **All form labels verified**: sign-in, register, forgot-password, reset-password, add-river, edit-river, create-filter, review-form all use proper `<Label htmlFor>` associations
+
+### Component Index Updates
+- Exported: `FlowChart`, `ConditionSparkline`, `InstallPrompt` from `web/src/components/index.ts`
+
+### Build
+- Zero TypeScript errors across all new and modified files

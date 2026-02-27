@@ -907,3 +907,77 @@ Comprehensive accessibility audit: all icon-only buttons have `aria-label`, deco
 Added 163 new web tests (722 → 885) across 6 files: `admin-users.test.ts` (+15), `middleware.test.ts` (35, was 2), `river-analytics.test.ts` (+9), `lib/admin.test.ts` (22), `accessibility.test.ts` (42), `scrapers.test.ts` (+3). 0 bugs found. Pipeline 746 unchanged. Grand total: 1,631.
 
 **Observations:** Middleware redirects non-admin to `/` (correct UX for page nav, differs from API 403 pattern). Admin users `POST /api/admin/users` uses `Number(body.limit) || 20` — `limit=0` silently becomes 20 (same pattern as alerts route).
+
+---
+
+## BD-040: Content Security Policy
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Added comprehensive CSP header to `web/next.config.ts`. Policy: `default-src 'self'`, `style-src 'self' 'unsafe-inline' unpkg.com` (Tailwind + Leaflet CDN), `img-src 'self' data:` (base64 uploads), `connect-src` allows Open-Meteo and OAuth origins, `frame-src` allows OAuth, `frame-ancestors 'none'`, `worker-src 'self' blob:`, `object-src 'none'`. Violations reported to `POST /api/csp-report` (logs to console). No `unsafe-eval` anywhere — using strict script-src.
+
+---
+
+## BD-041: ETag Caching for Public GET Endpoints
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Created `withETag(handler)` HOF in `web/src/lib/etag.ts`. Uses MD5 hash of response body as weak ETag. Returns 304 Not Modified when `If-None-Match` matches. Sets `Cache-Control: public, max-age=60, stale-while-revalidate=300`. Applied to 4 public GET endpoints: `/api/rivers`, `/api/rivers/[id]`, `/api/deals`, `/api/search`. User-specific endpoints (trips, alerts, user/rivers) intentionally excluded — their data varies per user and should not be publicly cached.
+
+---
+
+## BD-042: Input Sanitization for User Content
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Utah
+
+Created `web/src/lib/sanitize.ts` with regex-based HTML stripping (no external library). Strips script/iframe/object tags, event handlers, javascript: URLs. Applied to all user-generated text fields: review title/body, trip name/notes, photo captions. Combined with `truncate()` for length enforcement. Sanitization runs after Zod validation, before DB write.
+
+---
+
+## FE-032: Onboarding Wizard — localStorage Completion Tracking
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Onboarding completion tracked via `localStorage` key `water-watcher-onboarding-complete` rather than a server-side flag on the User model. Rationale: avoids schema changes, instant read (no API call), and the wizard is purely a UX convenience — if localStorage is cleared, the user simply sees the wizard again (no harm). If we later want server-side tracking, we can layer it on without breaking the existing flow.
+
+---
+
+## FE-033: ErrorFallback Component with Variant System
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Created a reusable `ErrorFallback` component with 4 variants (`not-found`, `server-error`, `network-error`, `auth-error`). Each variant has a default icon, title, and description that can be overridden via props. Existing error boundaries (`app/error.tsx`, `rivers/[id]/error.tsx`) refactored to use it. New error boundaries should use `ErrorFallback` instead of building custom Card layouts. The `onRetry` callback enables Try Again behavior, `showReportLink` adds a GitHub issues link.
+
+---
+
+## FE-034: Print Stylesheet Strategy
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+Print styles live in a single `@media print` block at the end of `globals.css`. Uses role-based and attribute selectors (`[role="tabpanel"]`, `[role="tablist"]`, `a[href^="http"]`) for durability — they work regardless of Tailwind class name changes. Forces light theme via `!important` overrides. River detail tabs are displayed sequentially (all panels visible) in print. Custom `print:hidden` class available for any element that should be hidden when printing.
+
+---
+
+## FE-035: NetworkStatus Offline Banner
+**Status:** Accepted — **Date:** 2026-02-24 — **By:** Tyler
+
+`NetworkStatus` component mounted in root layout shows a dismissable banner when the browser goes offline. Uses `navigator.onLine` + `online`/`offline` events. Auto-hides on reconnection. z-index 60 places it above all other UI including navigation (z-30) and modals (z-50).
+
+---
+
+## TST-011: Round 14 Test Coverage — CSP, ETag, Input Sanitization
+**Status:** Informational — **Date:** 2026-02-24 — **By:** Pappas
+
+Created 3 new test files with 97 tests covering Round 14 features:
+
+- **CSP & Security Headers** (24 tests): Full CSP directive coverage, Leaflet CDN allowance, CSP report endpoint behavior.
+- **ETag Caching** (18 tests): withETag HOF — 304 negotiation, Cache-Control, data-dependent hashing, non-200 passthrough.
+- **Input Sanitization** (55 tests): sanitizeHtml (XSS prevention), sanitizeFilename (safe downloads), truncate (length enforcement).
+
+### Edge Cases Found
+
+1. `sanitizeFilename` collapses dashes into underscores — `my-file.csv` → `my_file.csv`. Intentional but potentially surprising.
+2. `sanitizeFilename("   ")` → `"_"` not `"download"`. Whitespace-only input doesn't trigger the empty fallback.
+3. `withETag` consumes response body (single-use). Tests must provide fresh Response objects per invocation.
+
+### Full Suite Status
+
+- **Web:** 982 tests, 0 failures (39 files)
+- **Pipeline:** 746 tests, 0 failures (17 files)
+- **Grand total: 1,728 tests, 0 failures**
+
+No test failures or regressions detected across the entire codebase.

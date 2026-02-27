@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ConditionBadge } from "./condition-badge";
+import { ConditionSparkline } from "./condition-sparkline";
 import { Droplets, AlertTriangle, Users, ChevronRight, Trash2, Star } from "lucide-react";
 import { formatFlowRate } from "@/lib/utils";
 import { deleteRiver } from "@/lib/api";
@@ -22,7 +23,9 @@ interface RiverCardProps {
   selected?: boolean;
   /** Called when the card is selected/deselected */
   onSelect?: (riverId: string) => void;
-}
+  /** Optional recent flow rate data for sparkline (last 7 values) */
+  sparklineData?: (number | null)[];
+}, sparklineData
 
 export function RiverCard({ river, onDelete, isFavorited, onToggleFavorite, selectable, selected, onSelect }: RiverCardProps) {
   const cond = river.latestCondition;
@@ -145,6 +148,15 @@ export function RiverCard({ river, onDelete, isFavorited, onToggleFavorite, sele
               <span className="flex items-center gap-1">
                 <Users className="h-3.5 w-3.5" />
                 {river.trackerCount}
+              </span>
+            )}
+            {/* Sparkline — shows flow trend for last 7 days */}
+            {sparklineData && sparklineData.length >= 2 && (
+              <span className="ml-auto">
+                <ConditionSparkline
+                  data={sparklineData}
+                  label={`${river.name} flow trend`}
+                />
               </span>
             )}
           </div>

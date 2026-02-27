@@ -4,6 +4,7 @@ import { Navigation } from "@/components/navigation";
 import { Toaster } from "@/components/toaster";
 import { SessionProvider } from "@/components/session-provider";
 import { NetworkStatus } from "@/components/network-status";
+import { InstallPrompt } from "@/components/install-prompt";
 
 export const metadata: Metadata = {
   title: {
@@ -51,7 +52,7 @@ export default function RootLayout({
           {/* Skip to content link for keyboard/screen-reader users */}
           <a
             href="#main-content"
-            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[var(--primary)] focus:text-[var(--primary-foreground)] focus:rounded-md focus:text-sm focus:font-medium"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-[var(--primary)] focus:text-[var(--primary-foreground)] focus:rounded-md focus:text-sm focus:font-medium focus:outline-2 focus:outline-offset-2 focus:outline-[var(--ring)] focus:shadow-lg"
           >
             Skip to content
           </a>
@@ -62,6 +63,7 @@ export default function RootLayout({
             {children}
           </div>
           <Toaster />
+          <InstallPrompt />
         </SessionProvider>
       </body>
     </html>
