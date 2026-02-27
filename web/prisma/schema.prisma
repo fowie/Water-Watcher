@@ -23,18 +23,22 @@ model River {
   description String?
   awId        String?  @unique @map("aw_id") // American Whitewater ID
   usgsGaugeId String?  @map("usgs_gauge_id") // USGS gauge station ID
-  imageUrl    String?  @map("image_url")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  imageUrl       String?  @map("image_url")
+  permitRequired Boolean  @default(false) @map("permit_required")
+  permitInfo     String?  @map("permit_info")
+  permitUrl      String?  @map("permit_url")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  conditions  RiverCondition[]
-  hazards     Hazard[]
-  campsites   Campsite[]
-  rapids      Rapid[]
-  trackedBy   UserRiver[]
-  tripStops   TripStop[]
-  reviews     RiverReview[]
-  photos      RiverPhoto[]
+  conditions   RiverCondition[]
+  hazards      Hazard[]
+  campsites    Campsite[]
+  rapids       Rapid[]
+  trackedBy    UserRiver[]
+  tripStops    TripStop[]
+  reviews      RiverReview[]
+  photos       RiverPhoto[]
+  safetyAlerts SafetyAlert[]
 
   @@map("rivers")
 }
@@ -385,6 +389,45 @@ model RiverPhoto {
 
   @@index([riverId, createdAt])
   @@map("river_photos")
+}
+
+// ─── Safety Alerts ────────────────────────────────────
+
+enum SafetyAlertType {
+  CLOSURE
+  PERMIT_REQUIRED
+  HIGH_WATER
+  LOW_WATER
+  HAZARD_WARNING
+  WEATHER_WARNING
+  HAZARD
+}
+
+enum SafetyAlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model SafetyAlert {
+  id           String              @id @default(cuid())
+  riverId      String              @map("river_id")
+  type         SafetyAlertType
+  severity     SafetyAlertSeverity
+  title        String
+  description  String?
+  source       String?
+  activeFrom   DateTime            @map("active_from")
+  activeUntil  DateTime?           @map("active_until")
+  acknowledged Boolean             @default(false)
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  river River @relation(fields: [riverId], references: [id], onDelete: Cascade)
+
+  @@index([riverId, activeFrom])
+  @@index([type, severity])
+  @@map("safety_alerts")
 }
 
 // ─── River Reviews ────────────────────────────────────

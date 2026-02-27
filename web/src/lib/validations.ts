@@ -25,6 +25,9 @@ export const riverUpdateSchema = z.object({
   difficulty: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   imageUrl: z.string().url().nullable().optional(),
+  permitRequired: z.boolean().optional(),
+  permitInfo: z.string().max(2000).nullable().optional(),
+  permitUrl: z.string().url().nullable().optional(),
 });
 
 export type RiverUpdateInput = z.infer<typeof riverUpdateSchema>;
@@ -150,3 +153,49 @@ export const resetPasswordSchema = z.object({
 });
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+// ─── Weather ──────────────────────────────────────────────
+
+export const weatherQuerySchema = z.object({
+  date: z.string().datetime().optional(),
+});
+
+// ─── Safety Alerts ────────────────────────────────────────
+
+export const safetyAlertTypeEnum = z.enum([
+  "CLOSURE",
+  "PERMIT_REQUIRED",
+  "HIGH_WATER",
+  "LOW_WATER",
+  "HAZARD_WARNING",
+  "WEATHER_WARNING",
+  "HAZARD",
+]);
+
+export const safetyAlertSeverityEnum = z.enum([
+  "INFO",
+  "WARNING",
+  "CRITICAL",
+]);
+
+export const safetyAlertSchema = z.object({
+  type: safetyAlertTypeEnum,
+  severity: safetyAlertSeverityEnum,
+  title: z.string().min(1, "Title is required").max(200),
+  description: z.string().max(5000).optional(),
+  source: z.string().max(200).optional(),
+  activeFrom: z.string().datetime({ message: "Valid activeFrom date is required" }),
+  activeUntil: z.string().datetime().nullable().optional(),
+});
+
+export type SafetyAlertInput = z.infer<typeof safetyAlertSchema>;
+
+// ─── Permits ──────────────────────────────────────────────
+
+export const permitUpdateSchema = z.object({
+  permitRequired: z.boolean(),
+  permitInfo: z.string().max(2000).nullable().optional(),
+  permitUrl: z.string().url().nullable().optional(),
+});
+
+export type PermitUpdateInput = z.infer<typeof permitUpdateSchema>;

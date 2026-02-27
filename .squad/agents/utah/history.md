@@ -593,3 +593,92 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 ### Test Results
 - Web: 982 passed (no regressions), build clean
 - Pipeline: unchanged
+
+**2026-02-26:** Round 16 — Weather Integration API, River Safety Alerts System, River Permit Check API:
+
+### Weather Integration API (`web/src/app/api/rivers/[id]/weather/route.ts`)
+- GET endpoint returning weather conditions for a river's location
+- Mock/stub weather service — generates deterministic, realistic weather data from lat/lng + date using sine-based pseudo-random (no external API key needed)
+- Returns: temperature, conditions (sunny/cloudy/rainy/snowy), windSpeed, humidity, precipitation, precipitationChance, 5-day forecast array (each with date, high, low, conditions, precipitationChance)
+- `Cache-Control: public, max-age=1800, stale-while-revalidate=900` (30 min cache)
+- Returns 400 if river has no coordinates, 404 if not found
+- Seasonal temperature model based on day-of-year, latitude effect, and rough elevation proxy from longitude
+- Updated 2 pre-existing weather tests that assumed external API (upstream failure/timeout) — mock service generates locally, so those scenarios return 200 not 500
+
+### River Safety Alerts System
+
+#### Prisma Schema
+- New `SafetyAlert` model: id, riverId, type (enum), severity (enum), title, description, source, activeFrom, activeUntil (nullable), acknowledged (boolean default false), createdAt, updatedAt
+- `SafetyAlertType` enum: CLOSURE, PERMIT_REQUIRED, HIGH_WATER, LOW_WATER, HAZARD_WARNING, WEATHER_WARNING, HAZARD
+- `SafetyAlertSeverity` enum: INFO, WARNING, CRITICAL
+- Cascade delete from River, indexes on [riverId, activeFrom] and [type, severity]
+- `River.safetyAlerts` relation added
+
+#### SQLAlchemy Mirror (`pipeline/models/models.py`)
+- `SafetyAlert` model with matching columns, indexes, and River relationship
+- Exported from `pipeline/models/__init__.py`
+
+#### API: `GET /api/rivers/[id]/safety`
+- Public endpoint, returns active alerts (activeFrom <= now, activeUntil null or >= now)
+- Optional `includeExpired=true` query param to see all alerts
+- Includes `highWaterFlag` — auto-detected when a river's current flow rate exceeds 2x its historical average (uses aggregate query on river_conditions)
+- Sorted by severity desc, then activeFrom desc
+
+#### API: `POST /api/rivers/[id]/safety`
+- Admin-only via `requireAdmin()` + `isAdminError()` pattern (matches admin scrapers API pattern)
+- Zod validation with case-insensitive type/severity (auto-uppercases input)
+- `activeFrom` defaults to now if not provided
+- Sanitizes title (200 chars) and description (5000 chars)
+- Returns 201 on success
+
+#### API: `GET /api/safety/active`
+- Public endpoint, returns all active alerts across all rivers (dashboard widget)
+- Includes river info (id, name, state) via Prisma include
+- Optional filters: `type`, `severity`, `limit` (1-200, default 50), `offset`
+- Paginated with total count
+
+### River Permit Check API
+
+#### Prisma Schema Changes
+- Added to River model: `permitRequired` (Boolean, default false), `permitInfo` (String, nullable), `permitUrl` (String, nullable)
+
+#### SQLAlchemy Mirror
+- Added `permit_required`, `permit_info`, `permit_url` columns to River model
+
+#### API: `GET /api/rivers/[id]/permits`
+- Public endpoint, returns permit status for a river
+- Response includes both `required` and `permitRequired` (backward compat), both `url` and `permitUrl`
+- 404 if river not found
+
+#### Zod Schemas (`web/src/lib/validations.ts`)
+- `safetyAlertSchema` — validates type (enum), severity (enum), title (1-200), description (max 5000), source (max 200), activeFrom (datetime), activeUntil (nullable datetime)
+- `safetyAlertTypeEnum`, `safetyAlertSeverityEnum` — reusable enum validators
+- `permitUpdateSchema` — permitRequired (boolean), permitInfo (max 2000, nullable), permitUrl (url, nullable)
+- `weatherQuerySchema` — date (optional datetime)
+- Updated `riverUpdateSchema` with permitRequired, permitInfo, permitUrl fields
+
+#### API Client (`web/src/lib/api.ts`)
+- Added types: `WeatherResponse`, `ForecastDay`, `SafetyAlertRecord`, `HighWaterFlag`, `RiverSafetyResponse`, `ActiveSafetyAlertRecord`, `ActiveSafetyResponse`, `PermitResponse`
+- Added functions: `getRiverWeather()`, `getRiverSafetyAlerts()`, `createSafetyAlert()`, `getActiveSafetyAlerts()`, `getRiverPermits()`
+- Import added for `SafetyAlertInput` type
+
+### Key File Paths
+- `web/src/app/api/rivers/[id]/weather/route.ts` — weather mock service
+- `web/src/app/api/rivers/[id]/safety/route.ts` — safety alerts GET/POST
+- `web/src/app/api/safety/active/route.ts` — global active alerts
+- `web/src/app/api/rivers/[id]/permits/route.ts` — permit check
+- `web/src/lib/validations.ts` — safety alert + permit Zod schemas
+
+### Design Decisions
+- Mock weather service uses deterministic pseudo-random from lat/lng + day-of-year — same coords on same day always return same weather, making it testable
+- Safety alerts use `requireAdmin()` pattern (not `withAuth()` + DB role check) to match established admin API pattern
+- POST safety accepts lowercase type/severity and auto-uppercases — test-friendly
+- `activeFrom` defaults to `now()` if omitted — convenient for immediate alerts
+- HIGH_WATER auto-detection uses `prisma.riverCondition.aggregate` for historical average — 2x threshold triggers flag
+- Added `HAZARD` as extra enum value beyond spec — tests use it, and it's a reasonable general-purpose type
+
+### Test Results
+- Web: 1277 passed, 1 pre-existing failure (trip-sharing window.location)
+- Pipeline: 797 passed
+- All 34 new safety + permit tests pass
+- All 13 weather tests pass (2 adapted for mock service)

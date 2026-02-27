@@ -18,6 +18,7 @@ import {
   BarChart3,
   Star,
   TrendingUp,
+  ShieldAlert,
 } from "lucide-react";
 import {
   getRivers,
@@ -27,10 +28,12 @@ import {
   getTrackedRivers,
   getDealFilters,
   getRiverReviews,
+  getActiveSafetyAlerts,
 } from "@/lib/api";
 import { useSession } from "next-auth/react";
 import { timeAgo, cn } from "@/lib/utils";
-import type { AlertLogRecord } from "@/lib/api";
+import Link from "next/link";
+import type { AlertLogRecord, ActiveSafetyAlertRecord } from "@/lib/api";
 
 function StatsContent() {
   const { data: session } = useSession();
@@ -52,6 +55,10 @@ function StatsContent() {
   // User stats
   const [filterCount, setFilterCount] = useState(0);
 
+  // Safety alerts
+  const [safetyAlertCount, setSafetyAlertCount] = useState(0);
+  const [criticalAlerts, setCriticalAlerts] = useState<ActiveSafetyAlertRecord[]>([]);
+
   const loadStats = useCallback(async () => {
     setLoading(true);
     try {
@@ -62,6 +69,8 @@ function StatsContent() {
         getAlerts({ limit: 10 }),
         getTrackedRivers(),
         session?.user?.id ? getDealFilters(session.user.id) : Promise.resolve([]),
+        getActiveSafetyAlerts({ limit: 10, severity: "CRITICAL" }).catch(() => null),
+        getActiveSafetyAlerts({ limit: 1 }).catch(() => null),
       ]);
 
       // Rivers
@@ -105,6 +114,18 @@ function StatsContent() {
       // Tracked rivers
       if (results[4].status === "fulfilled") {
         setTrackedCount(results[4].value.rivers.length);
+      }
+
+      // Critical safety alerts
+      if (results[6].status === "fulfilled" && results[6].value) {
+        const safetyData = results[6].value as { alerts: ActiveSafetyAlertRecord[] };
+        setCriticalAlerts(safetyData.alerts ?? []);
+      }
+
+      // Total safety alert count
+      if (results[7].status === "fulfilled" && results[7].value) {
+        const totalSafety = results[7].value as { total: number };
+        setSafetyAlertCount(totalSafety.total ?? 0);
       }
 
       // Deal filters
@@ -263,7 +284,67 @@ function StatsContent() {
                   );
                 })}
               </div>
+            )
+
+      {/* Global Safety Dashboard */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-red-500" aria-hidden="true" />
+              Safety Dashboard
+            </CardTitle>
+            {safetyAlertCount > 0 && (
+              <Badge variant="secondary" className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                {safetyAlertCount} active alert{safetyAlertCount !== 1 ? "s" : ""}
+              </Badge>
             )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {safetyAlertCount === 0 && criticalAlerts.length === 0 ? (
+            <div className="text-center py-6">
+              <ShieldAlert className="h-8 w-8 mx-auto mb-2 text-green-500 opacity-60" aria-hidden="true" />
+              <p className="text-sm text-[var(--muted-foreground)]">
+                No active safety alerts across all rivers
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {criticalAlerts.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wide">
+                    Critical Alerts
+                  </p>
+                  {criticalAlerts.map((alert) => (
+                    <Link
+                      key={alert.id}
+                      href={`/rivers/${alert.river?.id ?? alert.riverId}`}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
+                    >
+                      <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" aria-hidden="true" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-red-800 dark:text-red-200 truncate">
+                          {alert.title}
+                        </p>
+                        <p className="text-xs text-red-600 dark:text-red-400">
+                          {alert.river?.name ?? "Unknown River"}{alert.river?.state ? `, ${alert.river.state}` : ""}
+                          {" · "}{timeAgo(alert.createdAt)}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {safetyAlertCount > criticalAlerts.length && (
+                <p className="text-xs text-[var(--muted-foreground)] text-center pt-2">
+                  + {safetyAlertCount - criticalAlerts.length} other active alert{safetyAlertCount - criticalAlerts.length !== 1 ? "s" : ""} across all rivers
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>}
           </CardContent>
         </Card>
       </div>

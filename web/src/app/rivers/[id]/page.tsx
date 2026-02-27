@@ -41,6 +41,9 @@ import {
 import Link from "next/link";
 import { PhotoGallery } from "@/components/photo-gallery";
 import { PhotoUpload } from "@/components/photo-upload";
+import { SafetyAlertBanner } from "@/components/safety-alert-banner";
+import { WeatherForecast } from "@/components/weather-forecast";
+import { PermitBadge } from "@/components/permit-badge";
 import type { RiverDetail, ConditionRecord, HazardRecord, CampsiteRecord, RapidRecord } from "@/types";
 
 export default function RiverDetailPage() {
@@ -189,6 +192,12 @@ export default function RiverDetailPage() {
           />
         </div>
       )}
+
+      {/* Safety Alerts */}
+      <SafetyAlertBanner riverId={id} />
+
+      {/* Weather Forecast */}
+      <WeatherForecast riverId={id} />
 
       {/* Average rating in header area */}
       {avgRating != null && (

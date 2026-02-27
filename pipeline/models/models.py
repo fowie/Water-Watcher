@@ -60,6 +60,9 @@ class River(Base):
     aw_id = Column(String, unique=True)
     usgs_gauge_id = Column(String)
     image_url = Column(String)
+    permit_required = Column(Boolean, default=False)
+    permit_info = Column(Text)
+    permit_url = Column(String)
     created_at = Column(DateTime, default=_utc_now)
     updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
 
@@ -69,6 +72,7 @@ class River(Base):
     trip_stops = relationship("TripStop", back_populates="river")
     reviews = relationship("RiverReview", back_populates="river")
     photos = relationship("RiverPhoto", back_populates="river")
+    safety_alerts = relationship("SafetyAlert", back_populates="river")
 
 
 class RiverCondition(Base):
@@ -344,3 +348,27 @@ class PasswordResetToken(Base):
     token = Column(String, unique=True, nullable=False)
     expires = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=_utc_now)
+
+
+class SafetyAlert(Base):
+    __tablename__ = "safety_alerts"
+
+    id = Column(String, primary_key=True)
+    river_id = Column(String, ForeignKey("rivers.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String, nullable=False)  # CLOSURE, PERMIT_REQUIRED, HIGH_WATER, LOW_WATER, HAZARD_WARNING, WEATHER_WARNING
+    severity = Column(String, nullable=False)  # INFO, WARNING, CRITICAL
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    source = Column(String)
+    active_from = Column(DateTime, nullable=False)
+    active_until = Column(DateTime)
+    acknowledged = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=_utc_now)
+    updated_at = Column(DateTime, default=_utc_now, onupdate=_utc_now)
+
+    river = relationship("River", back_populates="safety_alerts")
+
+    __table_args__ = (
+        Index("ix_safety_alerts_river_active", "river_id", "active_from"),
+        Index("ix_safety_alerts_type_severity", "type", "severity"),
+    )

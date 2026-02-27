@@ -193,9 +193,44 @@ function TripDetailContent() {
 
   const handleShare = async () => {
     const url = `${window.location.origin}/trips/${id}`;
+    const startStr = trip
+      ? new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+      : "";
+    const endStr = trip
+      ? new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : "";
+    const riverNames = trip?.stops
+      ? [...new Set(trip.stops.map((s) => s.river.name))].join(", ")
+      : "";
+    const summary = [
+      `🛶 ${trip?.name ?? "Trip"}`,
+      `📅 ${startStr} – ${endStr}`,
+      riverNames ? `🏞️ Rivers: ${riverNames}` : null,
+      trip?.stops?.length ? `📍 ${trip.stops.length} stop${trip.stops.length !== 1 ? "s" : ""}` : null,
+      url,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    // Try Web Share API first
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: trip?.name ?? "Trip",
+          text: summary,
+          url,
+        });
+        return;
+      } catch (err) {
+        // User cancelled or share failed — fall through to clipboard
+        if (err instanceof Error && err.name === "AbortError") return;
+      }
+    }
+
+    // Clipboard fallback
     try {
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copied!", description: "Trip link copied to clipboard." });
+      await navigator.clipboard.writeText(summary);
+      toast({ title: "Trip shared!", description: "Trip summary copied to clipboard." });
     } catch {
       toast({ title: "Copy failed", variant: "destructive" });
     }
@@ -303,12 +338,10 @@ function TripDetailContent() {
               <Pencil className="h-4 w-4 mr-1" aria-hidden="true" />
               Edit
             </Button>
-            {trip.isPublic && (
-              <Button size="sm" variant="outline" onClick={handleShare}>
-                <Share2 className="h-4 w-4 mr-1" aria-hidden="true" />
-                Share
-              </Button>
-            )}
+            <Button size="sm" variant="outline" onClick={handleShare}>
+              <Share2 className="h-4 w-4 mr-1" aria-hidden="true" />
+              Share Trip
+            </Button>
             {trip.status === "planning" && (
               <Button size="sm" variant="outline" onClick={() => handleStatusChange("active")}>
                 <PlayCircle className="h-4 w-4 mr-1" aria-hidden="true" />

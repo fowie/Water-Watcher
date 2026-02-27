@@ -16,6 +16,7 @@ import type {
   PhotoInput,
   ForgotPasswordInput,
   ResetPasswordInput,
+  SafetyAlertInput,
 } from "@/lib/validations";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -698,6 +699,126 @@ export async function updateAdminUserRole(userId: string, role: string): Promise
 }
 
 // ─── Helpers ────────────────────────────────────────────
+
+// ─── Weather ────────────────────────────────────────────
+
+export interface ForecastDay {
+  date: string;
+  high: number;
+  low: number;
+  conditions: string;
+  precipitationChance: number;
+}
+
+export interface WeatherResponse {
+  riverId: string;
+  riverName: string;
+  latitude: number;
+  longitude: number;
+  temperature: number;
+  conditions: string;
+  windSpeed: number;
+  humidity: number;
+  precipitationChance: number;
+  forecast: ForecastDay[];
+  generatedAt: string;
+}
+
+export async function getRiverWeather(riverId: string): Promise<WeatherResponse> {
+  return fetcher<WeatherResponse>(`/api/rivers/${riverId}/weather`);
+}
+
+// ─── Safety Alerts ──────────────────────────────────────
+
+export interface SafetyAlertRecord {
+  id: string;
+  riverId: string;
+  type: string;
+  severity: string;
+  title: string;
+  description: string | null;
+  source: string | null;
+  activeFrom: string;
+  activeUntil: string | null;
+  acknowledged: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HighWaterFlag {
+  triggered: boolean;
+  currentFlowRate: number | null;
+  historicalAverage: number | null;
+  ratio: number | null;
+}
+
+export interface RiverSafetyResponse {
+  alerts: SafetyAlertRecord[];
+  riverId: string;
+  highWaterFlag: HighWaterFlag | null;
+}
+
+export async function getRiverSafetyAlerts(
+  riverId: string,
+  params?: { includeExpired?: boolean }
+): Promise<RiverSafetyResponse> {
+  const sp = new URLSearchParams();
+  if (params?.includeExpired) sp.set("includeExpired", "true");
+  const q = sp.toString();
+  return fetcher<RiverSafetyResponse>(
+    `/api/rivers/${riverId}/safety${q ? `?${q}` : ""}`
+  );
+}
+
+export async function createSafetyAlert(
+  riverId: string,
+  data: SafetyAlertInput
+): Promise<SafetyAlertRecord> {
+  return fetcher<SafetyAlertRecord>(`/api/rivers/${riverId}/safety`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export interface ActiveSafetyAlertRecord extends SafetyAlertRecord {
+  river: { id: string; name: string; state: string };
+}
+
+export interface ActiveSafetyResponse {
+  alerts: ActiveSafetyAlertRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export async function getActiveSafetyAlerts(params?: {
+  limit?: number;
+  offset?: number;
+  type?: string;
+  severity?: string;
+}): Promise<ActiveSafetyResponse> {
+  const sp = new URLSearchParams();
+  if (params?.limit) sp.set("limit", String(params.limit));
+  if (params?.offset) sp.set("offset", String(params.offset));
+  if (params?.type) sp.set("type", params.type);
+  if (params?.severity) sp.set("severity", params.severity);
+  const q = sp.toString();
+  return fetcher<ActiveSafetyResponse>(`/api/safety/active${q ? `?${q}` : ""}`);
+}
+
+// ─── Permits ────────────────────────────────────────────
+
+export interface PermitResponse {
+  riverId: string;
+  riverName: string;
+  permitRequired: boolean;
+  permitInfo: string | null;
+  permitUrl: string | null;
+}
+
+export async function getRiverPermits(riverId: string): Promise<PermitResponse> {
+  return fetcher<PermitResponse>(`/api/rivers/${riverId}/permits`);
+}
 
 // ─── Auth: Password Reset ───────────────────────────────
 

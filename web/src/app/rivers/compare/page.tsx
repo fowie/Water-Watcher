@@ -10,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ConditionBadge } from "@/components/condition-badge";
 import { EmptyState } from "@/components/empty-state";
 import { getRiver } from "@/lib/api";
-import { formatFlowRate } from "@/lib/utils";
+import { formatFlowRate, timeAgo } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import {
   GitCompareArrows,
   Droplets,
@@ -20,6 +21,10 @@ import {
   AlertTriangle,
   ArrowLeft,
   Trophy,
+  Table2,
+  BarChart3,
+  Download,
+  Clock,
 } from "lucide-react";
 import type { RiverDetail } from "@/types";
 
@@ -127,6 +132,29 @@ export default function ComparePage() {
   const bestGaugeIdx = getBestIndex(latestConditions.map((c) => c?.gaugeHeight ?? null));
   const fewestHazardsIdx = getMinIndex(rivers.map((r) => r.hazards.filter((h) => h.isActive).length));
 
+  const [viewMode, setViewMode] = useState<"chart" | "table">("chart");
+  const { toast } = useToast();
+
+  const handleExportCSV = () => {
+    const headers = ["River Name", "Current Flow (CFS)", "Condition", "Difficulty", "Hazard Count", "Last Updated"];
+    const rows = rivers.map((r, i) => {
+      const cond = latestConditions[i];
+      return [
+        r.name,
+        cond?.flowRate != null ? String(cond.flowRate) : "",
+        cond?.quality ?? "",
+        r.difficulty ?? "",
+        String(r.hazards.filter((h) => h.isActive).length),
+        cond?.scrapedAt ? new Date(cond.scrapedAt).toISOString() : "",
+      ].map((val) => `"${val.replace(/"/g, '""')}"`).join(",");
+    });
+    const csv = [headers.join(","), ...rows].join("\n");
+    navigator.clipboard.writeText(csv).then(
+      () => toast({ title: "CSV copied!", description: "Comparison data copied to clipboard." }),
+      () => toast({ title: "Copy failed", variant: "destructive" })
+    );
+  };
+
   return (
     <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -140,14 +168,140 @@ export default function ComparePage() {
             Comparing {rivers.length} river{rivers.length !== 1 ? "s" : ""} side by side
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/rivers">
-            <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
-            Back to Rivers
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="flex rounded-lg border border-[var(--border)] overflow-hidden" role="tablist" aria-label="View mode">
+            <button
+              role="tab"
+              aria-selected={viewMode === "chart"}
+              onClick={() => setViewMode("chart")}
+              className={`px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors ${
+                viewMode === "chart"
+                  ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                  : "hover:bg-[var(--muted)]"
+              }`}
+            >
+              <BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />
+              Chart
+            </button>
+            <button
+              role="tab"
+              aria-selected={viewMode === "table"}
+              onClick={() => setViewMode("table")}
+              className={`px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors ${
+                viewMode === "table"
+                  ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                  : "hover:bg-[var(--muted)]"
+              }`}
+            >
+              <Table2 className="h-3.5 w-3.5" aria-hidden="true" />
+              Table
+            </button>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="h-4 w-4 mr-1.5" aria-hidden="true" />
+            Export CSV
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/rivers">
+              <ArrowLeft className="h-4 w-4 mr-2" aria-hidden="true" />
+              Back to Rivers
+            </Link>
+          </Button>
+        </div>
       </div>
 
+      {/* Table View */}
+      {viewMode === "table" && (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b-2 border-[var(--border)]">
+                <th className="text-left py-3 px-4 font-semibold">River Name</th>
+                <th className="text-left py-3 px-4 font-semibold">Current Flow</th>
+                <th className="text-left py-3 px-4 font-semibold">Condition</th>
+                <th className="text-left py-3 px-4 font-semibold">Difficulty</th>
+                <th className="text-left py-3 px-4 font-semibold">Hazards</th>
+                <th className="text-left py-3 px-4 font-semibold">Last Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rivers.map((river, i) => {
+                const cond = latestConditions[i];
+                const hazardCount = river.hazards.filter((h) => h.isActive).length;
+                return (
+                  <tr
+                    key={river.id}
+                    className="border-b border-[var(--border)] hover:bg-[var(--secondary)]/50 transition-colors"
+                  >
+                    <td className="py-3 px-4">
+                      <Link
+                        href={`/rivers/${river.id}`}
+                        className="font-medium hover:text-[var(--primary)] transition-colors"
+                      >
+                        {river.name}
+                      </Link>
+                      <p className="text-xs text-[var(--muted-foreground)]">{river.state}</p>
+                    </td>
+                    <td className="py-3 px-4">
+                      <CellValue
+                        value={cond?.flowRate != null ? formatFlowRate(cond.flowRate) : null}
+                        isBest={i === bestFlowIdx}
+                      />
+                    </td>
+                    <td className="py-3 px-4">
+                      {cond?.quality ? (
+                        <ConditionBadge quality={cond.quality} />
+                      ) : (
+                        <span className="text-[var(--muted-foreground)]">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {river.difficulty ? (
+                        <Badge variant="secondary">{river.difficulty}</Badge>
+                      ) : (
+                        <span className="text-[var(--muted-foreground)]">—</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`font-medium ${
+                          i === fewestHazardsIdx && hazardCount === 0
+                            ? "text-green-600"
+                            : hazardCount > 0
+                            ? "text-orange-600"
+                            : ""
+                        }`}
+                      >
+                        {hazardCount}
+                        {i === fewestHazardsIdx && rivers.length > 1 && (
+                          <Badge variant="secondary" className="ml-2 text-[10px]">
+                            Safest
+                          </Badge>
+                        )}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-[var(--muted-foreground)]">
+                      {cond?.scrapedAt ? (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" aria-hidden="true" />
+                          {timeAgo(cond.scrapedAt)}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Chart View (existing comparison layout) */}
+      {viewMode === "chart" && (
+        <>
       {/* Desktop: Comparison table */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full border-collapse">
@@ -350,6 +504,8 @@ export default function ComparePage() {
           );
         })}
       </div>
+        </>
+      )}
     </main>
   );
 }

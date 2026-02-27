@@ -13,6 +13,7 @@ from models.models import (
     NotificationPreference,
     AlertLog,
     PasswordResetToken,
+    SafetyAlert,
 )
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     "NotificationPreference",
     "AlertLog",
     "PasswordResetToken",
+    "SafetyAlert",
 ]

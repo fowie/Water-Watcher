@@ -812,3 +812,49 @@
 
 ### Build
 - Zero TypeScript errors across all new and modified files
+
+**2026-02-26:** Round 16 — Safety Alert Banner, Weather Forecast Card, Permit Badge, Trip Sharing, Comparison Enhancements, Safety Dashboard Widget:
+
+### Safety Alert Banner (`web/src/components/safety-alert-banner.tsx`)
+- Displays active safety alerts on river detail page, fetches from `GET /api/rivers/[id]/safety-alerts`
+- Color-coded by severity: INFO (blue), WARNING (amber), CRITICAL (red)
+- Alert type emojis: 🚧 closure, 📋 permit, 🌊 high water, 💧 low water, ⚠️ hazard, 🌩️ weather
+- Dismissible via X button — acknowledges via POST API call
+- Collapsible: shows max 2, "Show N more" expands/collapses
+- `role="alert"` and `role="region"` with `aria-label` for accessibility
+
+### Weather Forecast Card (`web/src/components/weather-forecast.tsx`)
+- 5-day forecast fetching from `GET /api/rivers/[id]/weather`
+- Compact horizontal layout: day name, date, condition icon, high/low temps, precipitation %
+- Responsive: horizontal scroll on mobile
+- Wired into river detail page between stats and rating
+
+### Permit Info Badge (`web/src/components/permit-badge.tsx`)
+- Amber badge "📋 Permit Required" with optional link to permit URL
+- Accessible link with `aria-label`
+
+### Trip Sharing Enhancement (`web/src/app/trips/[id]/page.tsx`)
+- Uses Web Share API with clipboard fallback
+- Rich summary: 🛶 name, 📅 dates, 🏞️ rivers (deduplicated), 📍 stop count, URL
+- Share button always visible (not just public trips)
+
+### River Comparison Enhancements (`web/src/app/rivers/compare/page.tsx`)
+- Chart/table view toggle with `role="tablist"` + `aria-selected`
+- Table view: River Name, Current Flow, Condition, Difficulty, Hazards, Last Updated
+- "Export CSV" button copies RFC 4180 CSV to clipboard with toast
+- Chart view preserves existing comparison UI
+
+### Global Safety Dashboard Widget (`web/src/app/stats/page.tsx`)
+- Safety Dashboard card with ShieldAlert icon and active alert count badge
+- Critical alerts as clickable links to affected river detail pages
+- Fetches from `GET /api/safety/active` via `Promise.allSettled`
+- Green shield "all clear" state when no alerts
+
+### Component Index
+- Exported: `SafetyAlertBanner`, `WeatherForecast`, `PermitBadge`
+
+### Architecture Notes
+- Safety alert banner uses direct fetch to avoid coupling to evolving API shapes
+- Weather forecast is separate from existing weather-widget (different data source: app API vs Open-Meteo)
+- CSV export uses clipboard for simplicity — no Blob download needed
+- Trip sharing uses `navigator.share` feature detection with graceful fallback
