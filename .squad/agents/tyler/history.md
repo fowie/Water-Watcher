@@ -858,3 +858,11 @@
 - Weather forecast is separate from existing weather-widget (different data source: app API vs Open-Meteo)
 - CSV export uses clipboard for simplicity — no Blob download needed
 - Trip sharing uses `navigator.share` feature detection with graceful fallback
+
+**2026-02-26 (Round 15 cross-agent — from Utah):** Built flow history API (`GET /api/rivers/[id]/flow-history?range=24h|7d|30d|90d`) returning time-series flow data. Batch conditions API (`GET /api/rivers/batch-conditions?ids=...`) for latest condition per river (max 50 IDs). Enhanced rate limiting with auth (60/min) vs anonymous (20/min) differentiation and X-RateLimit headers.
+
+**2026-02-26 (Round 15 cross-agent — from Pappas):** 137 new tests (web 982→1,119, total 1,865). Covers rate-limit middleware (21), flow history (18), batch conditions (18), SSE rivers (17), flow-chart + sparkline + install-prompt source tests (57). Edge cases: empty `?ids=` routing, FlowChartSkeleton module-private, sparkline destructured defaults.
+
+**2026-02-26 (Round 16 cross-agent — from Utah):** Built weather API (`GET /api/rivers/[id]/weather`) with deterministic mock service, 5-day forecast, 30-min cache. Safety alert system: `SafetyAlert` model with type/severity enums, `GET/POST /api/rivers/[id]/safety` (admin-only POST, HIGH_WATER auto-detection at 2x historical average), `GET /api/safety/active` (global). Permit check: `permitRequired`/`permitInfo`/`permitUrl` fields on River model, `GET /api/rivers/[id]/permits`. Key files: `web/src/app/api/rivers/[id]/weather/route.ts`, `web/src/app/api/rivers/[id]/safety/route.ts`, `web/src/app/api/safety/active/route.ts`, `web/src/app/api/rivers/[id]/permits/route.ts`.
+
+**2026-02-26 (Round 16 cross-agent — from Pappas):** 210 new tests (web 1,119→1,278, pipeline 746→797, total 2,075). Weather API (15), safety alerts (30), permits (12), safety alert banner source tests (22), weather forecast source tests (57), trip sharing (23), pipeline safety model (51). Observations: WeatherWidget renders 3-day not 5-day forecast. Test-first pattern with dynamic import 501 fallback and skipIf for unimplemented components.

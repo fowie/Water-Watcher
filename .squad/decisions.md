@@ -981,3 +981,121 @@ Created 3 new test files with 97 tests covering Round 14 features:
 - **Grand total: 1,728 tests, 0 failures**
 
 No test failures or regressions detected across the entire codebase.
+
+---
+
+## FE-036: SVG-Only Flow Charts (No Charting Library)
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Tyler
+
+Built `flow-chart.tsx` using raw SVG — no Chart.js, Recharts, or other charting library. This keeps bundle size minimal and avoids dependency conflicts with Next.js App Router SSR. The chart uses `ResizeObserver` for responsive sizing and CSS custom properties for theme-aware colors. Trade-off: more code to maintain, but zero added dependencies and full control over rendering.
+
+---
+
+## FE-037: Flow Chart Fetches from `/api/rivers/[id]/flow-history`
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Tyler
+
+The `FlowChart` component fetches from `GET /api/rivers/[id]/flow-history?range=7d`. Expected response shape: `{ data: Array<{ timestamp: string, flowRate: number }>, riverId: string, range: string }`. Supports `range` query param with values: `24h`, `7d`, `30d`, `90d`.
+
+---
+
+## FE-038: Sparkline Data Architecture
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Tyler
+
+`ConditionSparkline` accepts a simple `data: (number | null)[]` array prop rather than fetching its own data. This keeps it lightweight and avoids N+1 fetch waterfalls on the rivers list page. River cards pass `sparklineData` as an optional prop — the parent page is responsible for providing the data (either from a batch endpoint or from existing condition records). If no sparkline data is passed, the sparkline simply doesn't render.
+
+---
+
+## FE-039: PWA Install Prompt Session Dismissal
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Tyler
+
+Install prompt uses `sessionStorage` (not `localStorage`) for dismissal tracking. This means users who dismiss the prompt will see it again next session — important for re-engagement since PWA install is a key conversion moment. The prompt auto-hides when the app detects it's running in standalone mode.
+
+---
+
+## FE-040: Safety Alert Banner Pattern
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Tyler
+
+Safety alert banner uses direct `fetch()` calls internally rather than importing from `api.ts`. This keeps the component self-contained and decoupled from specific API response shapes that may evolve. The banner auto-hides when no alerts are present and uses local state for dismissed alerts with a fire-and-forget POST for acknowledgment.
+
+---
+
+## FE-041: Comparison View Toggle + CSV Export
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Tyler
+
+River comparison page now has chart/table view toggle. Table view adds Last Updated column and is a flat, sortable-ready layout. CSV export copies to clipboard via `navigator.clipboard.writeText()` rather than creating a Blob download — simpler for the small dataset sizes involved (max 3 rivers). CSV follows RFC 4180 with proper quoting.
+
+---
+
+## FE-042: Trip Sharing via Web Share API
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Tyler
+
+Trip sharing now uses `navigator.share()` as primary method with rich text summary, falling back to clipboard copy. Share button is always visible (removed the `isPublic` gate) since the summary is useful even for private trip planning coordination.
+
+---
+
+## FE-043: Weather Forecast vs Weather Widget
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Tyler
+
+Created `weather-forecast.tsx` as a separate component from the existing `weather-widget.tsx`. The forecast card fetches from the app's own `GET /api/rivers/[id]/weather` endpoint, while the widget uses Open-Meteo directly. Both render on the river detail page — forecast in the header area, widget in the Weather tab. This allows Utah's API to provide curated/cached data while the tab still has the live Open-Meteo fallback.
+
+---
+
+## BD-043: Mock Weather Service (No External API)
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Utah
+
+Weather API at `GET /api/rivers/:id/weather` uses a deterministic mock service instead of calling an external API. Generates realistic weather data from latitude, longitude, and day-of-year using sine-based pseudo-random. Same coordinates on same day always return the same weather data — deterministic and testable without API keys. Can be swapped for Open-Meteo or similar later without changing the response contract.
+
+---
+
+## BD-044: Safety Alert System with Admin-Only Creation
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Utah
+
+Safety alerts use the `requireAdmin()` + `isAdminError()` pattern for POST (same as admin scrapers/users). GET endpoints are public. The `SafetyAlert` model is separate from `Hazard` — hazards are scraper-reported river obstacles, while safety alerts are admin-posted advisories with severity levels (INFO/WARNING/CRITICAL) and time bounds (activeFrom/activeUntil).
+
+---
+
+## BD-045: HIGH_WATER Auto-Detection via Flow Rate Ratio
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Utah
+
+GET `/api/rivers/:id/safety` includes a `highWaterFlag` computed by comparing the river's latest flow rate to its all-time average. If `currentFlowRate / historicalAverage >= 2.0`, the flag triggers. This is informational only — it does not create a SafetyAlert record automatically. The frontend can use this flag to display warnings.
+
+---
+
+## BD-046: Permit Fields on River Model
+**Status:** Accepted — **Date:** 2026-02-26 — **By:** Utah
+
+Added `permitRequired` (boolean, default false), `permitInfo` (text, nullable), `permitUrl` (string, nullable) directly to the River model. This is simpler than a separate Permit model since permit info is a static attribute of a river, not a time-bounded entity. Mirrored in SQLAlchemy. The `riverUpdateSchema` was extended so existing PATCH `/api/rivers/:id` can update permit fields.
+
+---
+
+## TST-012: Round 15 Test Coverage — Rate Limiting, Flow History, Batch Conditions, Components
+**Status:** Informational — **Date:** 2026-02-26 — **By:** Pappas
+
+137 new tests across 5 files. Web: 982 → 1,119. Pipeline: 746 (unchanged). Grand total: 1,865.
+
+- `rate-limit-middleware.test.ts` (21): Token bucket, auth vs anonymous configs, per-IP isolation, X-RateLimit headers, 429 handling.
+- `flow-history.test.ts` (18): Range params, response shape, Prisma query verification, null fields.
+- `batch-conditions.test.ts` (18): ID validation, 50-ID limit, mixed results, response schema.
+- `sse-rivers.test.ts` (17): SSE headers, retry directive, event format, Last-Event-Id reconnection.
+- `flow-chart.test.ts` (57): FlowChart SVG/tabs/API/tooltips, ConditionSparkline trends, InstallPrompt PWA events.
+
+Edge cases: empty `?ids=` hits wrong error path, FlowChartSkeleton is module-private, sparkline dimensions use destructured defaults.
+
+---
+
+## TST-013: Round 16 Test Coverage — Weather, Safety, Permits, Components
+**Status:** Informational — **Date:** 2026-02-26 — **By:** Pappas
+
+210 new tests across 7 files (6 web, 1 pipeline). Web: 1,119 → 1,278. Pipeline: 746 → 797. Grand total: 2,075.
+
+- `weather-api.test.ts` (15): Forecast validation, 404, cache headers, coordinate handling.
+- `safety-alerts.test.ts` (30): GET/POST safety alerts, admin auth, HIGH_WATER detection.
+- `permit-api.test.ts` (12): Permit status, full info shape, boolean validation.
+- `safety-alert-banner.test.ts` (22): Severity colors, dismiss, collapse, icons, accessibility.
+- `weather-forecast.test.ts` (57): WeatherWidget source-level analysis — rendering, states, helpers, icons, data fetching.
+- `trip-sharing.test.ts` (23): Clipboard fallback, Web Share API, shareable summary.
+- `test_safety_model.py` (51): Hazard model structural tests — columns, nullability, relationships, indexes, defaults.
+
+Observations: WeatherWidget renders 3-day (not 5-day) forecast. SafetyAlertBanner doesn't exist yet (skipIf pattern). No permit fields on River model yet. Trip sharing currently clipboard-only.
+
+Test strategy: API route tests use dynamic `import()` with 501 fallback. Component tests use `skipIf(!componentExists)`. All tests pass now and will validate real implementations once built.

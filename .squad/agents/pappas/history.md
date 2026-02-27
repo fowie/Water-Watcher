@@ -221,3 +221,11 @@
 - **Observation:** Trip sharing currently uses clipboard-only (`navigator.clipboard.writeText`), not Web Share API. Tests cover both the current implementation and anticipated Web Share API enhancement.
 - **Edge case found:** `window.location.origin` is not available in Vitest Node environment — must use hardcoded origin in tests. Fixed on first run.
 - Final counts: **web 1,278 tests, 0 failures** (was 1,119), **pipeline 797 passed, 0 failures** (was 746). Grand total: **2,075** (was 1,865), +210 new tests.
+
+**2026-02-26 (Round 15 cross-agent — from Utah):** Built flow history API (`GET /api/rivers/[id]/flow-history`), batch conditions API (`GET /api/rivers/batch-conditions`), and enhanced rate limiting (auth 60/min vs anonymous 20/min with X-RateLimit headers).
+
+**2026-02-26 (Round 15 cross-agent — from Tyler):** SVG-based `FlowChart` with range tabs and color zones (no charting library). `ConditionSparkline` (80x24px) with trend detection for river cards. PWA `InstallPrompt` with sessionStorage dismissal. Accessibility pass.
+
+**2026-02-26 (Round 16 cross-agent — from Utah):** Weather API with deterministic mock service (no external API), SafetyAlert model with type/severity enums and admin-only creation, HIGH_WATER auto-detection (2x historical average), permit fields on River model. Key endpoints: `GET /api/rivers/[id]/weather`, `GET/POST /api/rivers/[id]/safety`, `GET /api/safety/active`, `GET /api/rivers/[id]/permits`.
+
+**2026-02-26 (Round 16 cross-agent — from Tyler):** SafetyAlertBanner (severity colors, dismiss, collapsible). WeatherForecast card (app API, separate from Open-Meteo widget). PermitBadge. Trip sharing via Web Share API + clipboard fallback. Comparison chart/table toggle + CSV export. Safety dashboard widget on stats page.

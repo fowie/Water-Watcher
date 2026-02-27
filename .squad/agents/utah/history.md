@@ -682,3 +682,11 @@ Updated test in `test_aw_scraper.py` — logjam assertion now expects "logjam" i
 - Pipeline: 797 passed
 - All 34 new safety + permit tests pass
 - All 13 weather tests pass (2 adapted for mock service)
+
+**2026-02-26 (Round 15 cross-agent — from Tyler):** Built SVG-based `FlowChart` component (no charting library) with 24h/7d/30d/90d range tabs, color-coded zones, hover tooltips, ResizeObserver responsiveness. Added as 8th tab on river detail. `ConditionSparkline` (80x24px SVG) with trend detection for river cards. PWA `InstallPrompt` with sessionStorage dismissal and standalone detection. Accessibility pass: enhanced focus styles, aria-labels, role="status". Key files: `web/src/components/flow-chart.tsx`, `web/src/components/condition-sparkline.tsx`, `web/src/components/install-prompt.tsx`.
+
+**2026-02-26 (Round 15 cross-agent — from Pappas):** 137 new tests (web 982→1,119, total 1,865). Covers rate-limit middleware (21), flow history (18), batch conditions (18), SSE rivers (17), flow-chart + sparkline + install-prompt (57). All passing.
+
+**2026-02-26 (Round 16 cross-agent — from Tyler):** Built `SafetyAlertBanner` component with severity colors (INFO=blue, WARNING=amber, CRITICAL=red), type emojis, dismiss with API acknowledgment, collapsible (max 2 visible). `WeatherForecast` card fetching from app's weather API (separate from Open-Meteo widget). `PermitBadge` with amber badge and optional URL. Trip sharing enhanced with Web Share API + clipboard fallback. Comparison page: chart/table toggle + CSV export. Safety dashboard widget on stats page. Key files: `web/src/components/safety-alert-banner.tsx`, `web/src/components/weather-forecast.tsx`, `web/src/components/permit-badge.tsx`.
+
+**2026-02-26 (Round 16 cross-agent — from Pappas):** 210 new tests (web 1,119→1,278, pipeline 746→797, total 2,075). Weather API (15), safety alerts (30), permits (12), safety banner (22), weather forecast (57), trip sharing (23), safety model (51). Observations: WeatherWidget renders 3-day not 5-day. SafetyAlertBanner doesn't exist yet — tests use skipIf pattern. No permit fields on River model yet — tests anticipate addition.
